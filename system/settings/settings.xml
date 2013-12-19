@@ -663,7 +663,7 @@
       <group id="1">
         <setting id="subtitles.font" type="string" label="14089" help="36185">
           <level>1</level>
-          <default>NanumGothic.ttf</default>
+          <default>NanumBarunGothic.ttf</default>
           <constraints>
             <options>fonts</options>
           </constraints>
