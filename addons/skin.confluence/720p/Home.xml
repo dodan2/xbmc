@@ -804,7 +804,7 @@
 			</control>
 			<control type="fixedlist" id="9000">
 				<posx>-110</posx>
-				<posy>5</posy>
+				<posy>10</posy>
 				<width>1500</width>
 				<height>60</height>
 				<onleft>9000</onleft>
