@@ -160,4 +160,3 @@ unsigned int CFileUtils::LoadFile(const std::string &filename, void* &outputBuff
 
   return total_read;
 }
-
