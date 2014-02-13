@@ -2454,7 +2454,8 @@
             <dependency type="visible">
               <and>
                 <condition setting="audiooutput.passthrough" operator="is">true</condition>
-                <condition on="property" name="aesettingvisible" setting="audiooutput.config">audiooutput.passthrough</condition>
+                <condition on="property" name="aesettingvisible" setting="audiooutput.config">audiooutput.eac3passthrough</condition>
+                <condition on="property" name="aesettingvisible" setting="audiooutput.passthroughdevice">audiooutput.eac3passthrough</condition>
               </and>
             </dependency>
           </dependencies>
@@ -2701,9 +2702,8 @@
     <category id="masterlock" label="12360" help="36395">
       <access>CheckMasterLock</access>
       <group id="1">
-        <setting id="masterlock.lockcode" type="string" label="20100" help="36396">
+        <setting id="masterlock.lockcode" type="action" label="20100" help="36396">
           <level>2</level>
-          <default>-</default>
           <control type="button" format="action">
             <hidevalue>true</hidevalue>
           </control>
