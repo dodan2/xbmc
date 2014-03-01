@@ -20,9 +20,18 @@
 
 #include "CoreAudioStream.h"
 
-#include "CoreAudioAEHAL.h"
+#include "CoreAudioHelpers.h"
 #include "utils/log.h"
 #include "utils/StdString.h"
+
+// defines taken from CoreAudio/AudioHardware.h from SDK 10.8
+#if !defined kAudioStreamTerminalTypeHDMI
+#define kAudioStreamTerminalTypeHDMI 'hdmi'
+#endif
+
+#if !defined kAudioStreamTerminalTypeDisplayPort
+#define kAudioStreamTerminalTypeDisplayPort 'dprt'
+#endif
 
 CCoreAudioStream::CCoreAudioStream() :
   m_StreamId  (0    )
@@ -127,9 +136,17 @@ UInt32 CCoreAudioStream::GetDirection()
   return val;
 }
 
-UInt32 CCoreAudioStream::GetTerminalType()
+bool CCoreAudioStream::IsDigitalOuptut(AudioStreamID id)
 {
-  if (!m_StreamId)
+  UInt32 type = GetTerminalType(id);
+  return (type == kAudioStreamTerminalTypeDigitalAudioInterface ||
+          type == kAudioStreamTerminalTypeDisplayPort ||
+          type == kAudioStreamTerminalTypeHDMI);
+}
+
+UInt32 CCoreAudioStream::GetTerminalType(AudioStreamID id)
+{
+  if (!id)
     return 0;
 
   UInt32 val = 0;
@@ -140,7 +157,7 @@ UInt32 CCoreAudioStream::GetTerminalType()
   propertyAddress.mElement  = kAudioObjectPropertyElementMaster;
   propertyAddress.mSelector = kAudioStreamPropertyTerminalType; 
 
-  OSStatus ret = AudioObjectGetPropertyData(m_StreamId, &propertyAddress, 0, NULL, &size, &val); 
+  OSStatus ret = AudioObjectGetPropertyData(id, &propertyAddress, 0, NULL, &size, &val);
   if (ret)
     return 0;
   return val;
@@ -335,7 +352,12 @@ bool CCoreAudioStream::SetPhysicalFormat(AudioStreamBasicDescription* pDesc)
 
 bool CCoreAudioStream::GetAvailableVirtualFormats(StreamFormatList* pList)
 {
-  if (!pList || !m_StreamId)
+  return GetAvailableVirtualFormats(m_StreamId, pList);
+}
+
+bool CCoreAudioStream::GetAvailableVirtualFormats(AudioStreamID id, StreamFormatList* pList)
+{
+  if (!pList || !id)
     return false;
 
   AudioObjectPropertyAddress propertyAddress; 
@@ -344,13 +366,13 @@ bool CCoreAudioStream::GetAvailableVirtualFormats(StreamFormatList* pList)
   propertyAddress.mSelector = kAudioStreamPropertyAvailableVirtualFormats; 
 
   UInt32 propertySize = 0;
-  OSStatus ret = AudioObjectGetPropertyDataSize(m_StreamId, &propertyAddress, 0, NULL, &propertySize); 
+  OSStatus ret = AudioObjectGetPropertyDataSize(id, &propertyAddress, 0, NULL, &propertySize);
   if (ret)
     return false;
 
   UInt32 formatCount = propertySize / sizeof(AudioStreamRangedDescription);
   AudioStreamRangedDescription *pFormatList = new AudioStreamRangedDescription[formatCount];
-  ret = AudioObjectGetPropertyData(m_StreamId, &propertyAddress, 0, NULL, &propertySize, pFormatList); 
+  ret = AudioObjectGetPropertyData(id, &propertyAddress, 0, NULL, &propertySize, pFormatList);
   if (!ret)
   {
     for (UInt32 format = 0; format < formatCount; format++)
@@ -362,7 +384,12 @@ bool CCoreAudioStream::GetAvailableVirtualFormats(StreamFormatList* pList)
 
 bool CCoreAudioStream::GetAvailablePhysicalFormats(StreamFormatList* pList)
 {
-  if (!pList || !m_StreamId)
+  return GetAvailablePhysicalFormats(m_StreamId, pList);
+}
+
+bool CCoreAudioStream::GetAvailablePhysicalFormats(AudioStreamID id, StreamFormatList* pList)
+{
+  if (!pList || !id)
     return false;
 
   AudioObjectPropertyAddress propertyAddress; 
@@ -371,13 +398,13 @@ bool CCoreAudioStream::GetAvailablePhysicalFormats(StreamFormatList* pList)
   propertyAddress.mSelector = kAudioStreamPropertyAvailablePhysicalFormats; 
 
   UInt32 propertySize = 0;
-  OSStatus ret = AudioObjectGetPropertyDataSize(m_StreamId, &propertyAddress, 0, NULL, &propertySize); 
+  OSStatus ret = AudioObjectGetPropertyDataSize(id, &propertyAddress, 0, NULL, &propertySize);
   if (ret)
     return false;
 
   UInt32 formatCount = propertySize / sizeof(AudioStreamRangedDescription);
   AudioStreamRangedDescription *pFormatList = new AudioStreamRangedDescription[formatCount];
-  ret = AudioObjectGetPropertyData(m_StreamId, &propertyAddress, 0, NULL, &propertySize, pFormatList); 
+  ret = AudioObjectGetPropertyData(id, &propertyAddress, 0, NULL, &propertySize, pFormatList);
   if (!ret)
   {
     for (UInt32 format = 0; format < formatCount; format++)
