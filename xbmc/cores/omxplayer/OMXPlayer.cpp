@@ -1100,7 +1100,7 @@ void COMXPlayer::Process()
     m_bAbortRequest = true;
     return;
   }
-  if(CSettings::Get().GetBool("videoplayer.adjustrefreshrate"))
+  if(CSettings::Get().GetInt("videoplayer.adjustrefreshrate") != ADJUST_REFRESHRATE_OFF)
     m_av_clock.HDMIClockSync();
   m_av_clock.OMXStateIdle();
   m_av_clock.OMXStop();
@@ -3831,6 +3831,7 @@ int COMXPlayer::OnDVDNavResult(void* pData, int iMessage)
       {
         CLog::Log(LOGDEBUG, "DVDNAV_STOP");
         m_dvd.state = DVDSTATE_NORMAL;
+        CGUIDialogKaiToast::QueueNotification(g_localizeStrings.Get(16026), g_localizeStrings.Get(16029));
       }
       break;
     default:
