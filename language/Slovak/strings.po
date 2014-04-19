@@ -1085,6 +1085,10 @@ msgctxt "#308"
 msgid "Original stream's language"
 msgstr "Originálny jazyk Streamu"
 
+msgctxt "#309"
+msgid "User interface language"
+msgstr "Jazyk používateľského prostredia"
+
 msgctxt "#312"
 msgid "(0=auto)"
 msgstr "(0=auto)"
@@ -10209,6 +10213,10 @@ msgctxt "#24121"
 msgid "Enter search string"
 msgstr "Zadajte hľadaný výraz"
 
+msgctxt "#24122"
+msgid "Update all"
+msgstr "Aktualizovať všetko"
+
 msgctxt "#25000"
 msgid "Notifications"
 msgstr "Notifikácie"
@@ -11196,10 +11204,6 @@ msgstr "Select the default TV show information source. See the Add-ons Manager f
 msgctxt "#36200"
 msgid "Default scraper used for adding music videos to your library."
 msgstr "Default scraper used for adding music videos to your library."
-
-msgctxt "#36202"
-msgid "No info available yet."
-msgstr "Momentálne nie sú k dispozícii žiadne informácie."
 
 msgctxt "#36203"
 msgid "Enable the Personal Video Recorder (PVR) features in XBMC. This requires that at least one PVR Add-on is installed."

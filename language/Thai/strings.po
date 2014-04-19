@@ -1085,6 +1085,10 @@ msgctxt "#308"
 msgid "Original stream's language"
 msgstr "ภาษาของกระแสเสียงต้นฉบับ"
 
+msgctxt "#309"
+msgid "User interface language"
+msgstr "ภาษาของส่วนติดต่อผู้ใช้"
+
 msgctxt "#312"
 msgid "(0=auto)"
 msgstr "(0=อัตโนมัติ)"
@@ -4977,9 +4981,69 @@ msgctxt "#13439"
 msgid "Allow hardware acceleration (MediaCodec)"
 msgstr "เปิดใช้การเร่งความเร็วฮาร์ดแวร์ (MediaCodec)"
 
+msgctxt "#13440"
+msgid "Allow multi threaded software decoding"
+msgstr "ยอมให้ใช้การถอดรหัสด้วยซอฟท์แวร์ แบบหลายงาน"
+
+msgctxt "#13441"
+msgid "Use Mpeg-2 VDPAU"
+msgstr "ใช้งาน Mpeg-2 VDPAU"
+
+msgctxt "#13442"
+msgid "Enable this option to use hardware acceleration for Mpeg-(1/2) codecs. If disabled the CPU will be used instead. Older Radeon Cards tend to segfault with this enabled."
+msgstr "เปิดใช้ตัวเลือกนี้ เพื่อใข้การเร่งความเร็วด้วยฮาร์ดแวร์ สำหรับการเข้ารหัส Mpeg-(1/2). ถ้าปิดใช้งาน จะใช้ซีพียูแทน. การ์ด Radeon รุ่นเก่า อาจมีการแสดงบางส่วนผิดพลาด ถ้าเปิดใช้ส่วนนี้."
+
+msgctxt "#13443"
+msgid "Use Mpeg-4 VDPAU"
+msgstr "ใช้งาน Mpeg-4 VDPAU"
+
+msgctxt "#13444"
+msgid "Enable this option to use hardware acceleration for the Mpeg-4 codec. If disabled the CPU will be used instead. Some ION Hardware has problems with this being enabled by default."
+msgstr "เปิดใช้ตัวเลือกนี้ เพื่อใข้การเร่งความเร็วด้วยฮาร์ดแวร์ สำหรับการเข้ารหัส Mpeg-4. ถ้าปิดใช้งาน จะใช้ซีพียูแทน. ฮาร์ดแวร์ ION บางรุ่น อาจมีปัญหากับการเปิดใช้ส่วนนี้โดยค่าเริ่มต้น."
+
+msgctxt "#13445"
+msgid "Use VC-1 VDPAU"
+msgstr "ใช้งาน VC-1 VDPAU"
+
+msgctxt "#13446"
+msgid "Enable this option to use hardware acceleration for VC-1 based codecs. If disabled the CPU will be used instead. AMD Hardware with VDPAU cannot decode VC-1 Simple."
+msgstr "เปิดใช้ตัวเลือกนี้ เพื่อใข้การเร่งความเร็วด้วยฮาร์ดแวร์ สำหรับการเข้ารหัสหลัก VC-1. ถ้าปิดใช้งาน จะใช้ซีพียูแทน. ฮาร์ดแวร์ AMD ที่ใช้ VDPAU ไม่สามารถถอดรหัส VC-1 แบบพื้นๆได้."
+
+msgctxt "#13447"
+msgid "Use Mpeg-2 VAAPI"
+msgstr "ใช้งาน Mpeg-2 VAAPI"
+
+msgctxt "#13448"
+msgid "Enable this option to use hardware acceleration for Mpeg-(1/2) codecs. If disabled the CPU will be used instead. Some Mpeg-2 Videos might have green artifacts."
+msgstr "เปิดใช้ตัวเลือกนี้ เพื่อใข้การเร่งความเร็วด้วยฮาร์ดแวร์ สำหรับการเข้ารหัส Mpeg-(1/2). ถ้าปิดใช้งาน จะใช้ซีพียูแทน. วิดีโอ Mpeg-2 บางส่วน อาจมีการแตกสีเขียว."
+
+msgctxt "#13449"
+msgid "Use Mpeg-4 VAAPI"
+msgstr "ใช้งาน Mpeg-4 VAAPI"
+
+msgctxt "#13450"
+msgid "Enable this option to use hardware acceleration for the Mpeg-4 codec. If disabled the CPU will be used instead."
+msgstr "เปิดใช้ตัวเลือกนี้ เพื่อใข้การเร่งความเร็วด้วยฮาร์ดแวร์ สำหรับการเข้ารหัส Mpeg-4. ถ้าปิดใช้งาน จะใช้ซีพียูแทน."
+
+msgctxt "#13451"
+msgid "Use VC-1 VAAPI"
+msgstr "ใช้งาน VC-1 VAAPI"
+
+msgctxt "#13452"
+msgid "Enable this option to use hardware acceleration for VC-1 based codecs. If disabled the CPU will be used instead. Especially VC-1 Interlaced fails hard on Intel hardware."
+msgstr "เปิดใช้ตัวเลือกนี้ เพื่อใข้การเร่งความเร็วด้วยฮาร์ดแวร์ สำหรับการเข้ารหัสหลัก VC-1. ถ้าปิดใช้งาน จะใช้ซีพียูแทน. มักเกิดความล้มเหลวในการลบเส้นทางขวางอย่างมาก โดยเฉพาะในฮาร์ดแวร์ Intel."
+
+msgctxt "#13454"
+msgid "Decoding method"
+msgstr "กระบวนการถอดรหัส"
+
 msgctxt "#13455"
 msgid "Software"
 msgstr "ซอฟแวร์"
+
+msgctxt "#13456"
+msgid "Hardware accelerated"
+msgstr "เร่งความเร็วฮาร์ดแวร์แล้ว"
 
 msgctxt "#13500"
 msgid "A/V sync method"
@@ -5205,9 +5269,25 @@ msgctxt "#14026"
 msgid "Video cache - DVD-ROM"
 msgstr "วิดีโอ แคช - ดีวีดี รอม"
 
+msgctxt "#14027"
+msgid "Video cache - Local Network"
+msgstr "แคชของวิดีโอ - เครือข่ายท้องถิ่น"
+
+msgctxt "#14028"
+msgid "Video cache - Internet"
+msgstr "แคชของวิดีโอ - ผ่านอินเตอร์เน็ต"
+
 msgctxt "#14030"
 msgid "Audio cache - DVD-ROM"
 msgstr "แคชเสียง - ดีวีดี รอม"
+
+msgctxt "#14031"
+msgid "Audio cache - Local Network"
+msgstr "แคชของออดิโอ - เครือข่ายท้องถิ่น"
+
+msgctxt "#14032"
+msgid "Audio cache - Internet"
+msgstr "แคชของออดิโอ - ผ่านอินเตอร์เน็ต"
 
 msgctxt "#14034"
 msgid "DVD cache - DVD-ROM"
@@ -5220,6 +5300,10 @@ msgstr "เครือข่ายท้องถิ่น"
 msgctxt "#14036"
 msgid "Services"
 msgstr "บริการ"
+
+msgctxt "#14037"
+msgid "DVD cache - Local Network"
+msgstr "แคชของดีวีดี - เครือข่ายท้องถิ่น"
 
 msgctxt "#14038"
 msgid "Network settings changed"
@@ -5452,6 +5536,10 @@ msgstr "เอาแผ่นดิสก์ออกเมื่อริปแ
 msgctxt "#14100"
 msgid "Stop ripping CD"
 msgstr "หยุดการริป แผ่นซีดี"
+
+msgctxt "#14101"
+msgid "Acceleration"
+msgstr "การเร่งความเร็ว"
 
 msgctxt "#15012"
 msgid "Unavailable source"
@@ -6757,6 +6845,10 @@ msgctxt "#19220"
 msgid "Channels in"
 msgstr "ช่อง ใน"
 
+msgctxt "#19221"
+msgid "Synchronise channel groups with backend(s)"
+msgstr "เชื่อมโยงกลุ่มช่องด้วย backends"
+
 msgctxt "#19222"
 msgid "EPG"
 msgstr "EPG"
@@ -7297,6 +7389,10 @@ msgctxt "#19647"
 msgid "Motoring"
 msgstr "ยานยนต์"
 
+msgctxt "#19648"
+msgid "Fitness & Health"
+msgstr "การออกกำลัง & สุขภาพ"
+
 msgctxt "#19649"
 msgid "Cooking"
 msgstr "ทำอาหาร"
@@ -7316,6 +7412,10 @@ msgstr "อักขระพิเศษ"
 msgctxt "#19661"
 msgid "Original Language"
 msgstr "ภาษาต้นฉบับ"
+
+msgctxt "#19662"
+msgid "Black & White"
+msgstr "ขาว & ดำ"
 
 msgctxt "#19663"
 msgid "Unpublished"
@@ -8249,6 +8349,10 @@ msgctxt "#20326"
 msgid "This will reset the calibration values for %s"
 msgstr "การกระทำนี้จะคืนกลับค่าเดิมของการปรับเทียบ สำหรับ %s"
 
+msgctxt "#20327"
+msgid "to its default values."
+msgstr "ไปยังค่าเริ่มต้น."
+
 msgctxt "#20328"
 msgid "Browse for destination"
 msgstr "เรียกดูเป้าหมาย"
@@ -8581,6 +8685,10 @@ msgctxt "#20411"
 msgid "Flatten"
 msgstr "เรียบง่าย"
 
+msgctxt "#20412"
+msgid "Flatten TV show seasons"
+msgstr "รวม ฤดูของรายการทีวี"
+
 msgctxt "#20413"
 msgid "Get fanart"
 msgstr "รับ Fanart"
@@ -8880,6 +8988,10 @@ msgstr "ไดเร็กทอรี่ภาพยนต์ & คำบรร
 msgctxt "#21368"
 msgid "Override ASS/SSA subtitles fonts"
 msgstr "แทนที่แบบอักษรคำบรรยาย ASS / SSA"
+
+msgctxt "#21369"
+msgid "Enable mouse and touch screen support"
+msgstr "เปิดใช้งาน การรองรับเมาส์และหน้าจอสัมผัส"
 
 msgctxt "#21370"
 msgid "Play navigation sounds during media playback"
@@ -9236,6 +9348,10 @@ msgstr "จัดกลุ่ม โดย"
 msgctxt "#21459"
 msgid "mixed"
 msgstr "ผสม"
+
+msgctxt "#21460"
+msgid "Subtitle position on screen"
+msgstr "ตำแหน่งของคำบรรยายบนหน้าจอ"
 
 msgctxt "#21461"
 msgid "Fixed"
@@ -10015,7 +10131,7 @@ msgstr "ส่วนเสริม ที่พร้อมปรับรุ�
 
 msgctxt "#24062"
 msgid "Enabled Add-ons"
-msgstr "เปิดใช้ ส่วนเสริม"
+msgstr "ส่วนเสริม ที่เปิดใช้"
 
 msgctxt "#24063"
 msgid "Auto update"
@@ -10137,6 +10253,10 @@ msgctxt "#24105"
 msgid "Pause when searching for subtitles"
 msgstr "หยุดชั่วขณะ เมื่อทำการต้นหาคำบรรยาย"
 
+msgctxt "#24106"
+msgid "Specify where downloaded subtitles should be saved, the same location as the video or a custom location."
+msgstr "กำหนดตำแหน่งบันทึกคำบรรยายที่ถูกดาวน์โหลด, ในที่เดียวกับวิดีโอ หรือตำแหน่งที่กำหนดเอง."
+
 msgctxt "#24107"
 msgid "Searching for subtitles ..."
 msgstr "ทำการค้นหา คำบรรยาย"
@@ -10169,13 +10289,25 @@ msgctxt "#24114"
 msgid "No subtitle services installed"
 msgstr "ไม่มีบริการคำบรรยายติดตั้งอยู่"
 
+msgctxt "#24115"
+msgid "Subtitle storage location"
+msgstr "ตำแหน่งของแหล่งเก็บคำบรรยาย"
+
 msgctxt "#24116"
 msgid "Default TV Service"
 msgstr "ค่าเริ่มต้น บริการทีวี"
 
+msgctxt "#24117"
+msgid "Select service that will be used as default to search for TV Show subtitles."
+msgstr "เลือกบริการที่จะใช้เป็นค่าเริ่มต้น ในการค้นหาคำบรรยายสำหรับรายการทีวี."
+
 msgctxt "#24118"
 msgid "Default Movie Service"
 msgstr "ค่าเริ่มต้น บริการภาพยนตร์"
+
+msgctxt "#24119"
+msgid "Select service that will be used as default to search for Movie subtitles."
+msgstr "เลือกบริการที่จะใช้เป็นค่าเริ่มต้น ในการค้นหาคำบรรยายสำหรับภาพยนตร์."
 
 msgctxt "#24120"
 msgid "Manual search string"
@@ -10184,6 +10316,22 @@ msgstr "คำค้น ที่กำหนดเอง"
 msgctxt "#24121"
 msgid "Enter search string"
 msgstr "ป้อนคำค้น"
+
+msgctxt "#24122"
+msgid "Update all"
+msgstr "อัพเดททั้งหมด"
+
+msgctxt "#24123"
+msgid "Pause the current video while searching for subtitles and resume once the subtitle is available."
+msgstr "หยุดวิดีโอชั่วคราว ในขณะที่กำลังค้นหาคำบรรยาย และเล่นต่ออีกครั้ง เมื่อมีคำบรรยาย."
+
+msgctxt "#24124"
+msgid "Next to the video"
+msgstr "ถัดไปยังวิดีโอ"
+
+msgctxt "#24125"
+msgid "Custom location"
+msgstr "ตำแหน่งที่กำหนดเอง"
 
 msgctxt "#25000"
 msgid "Notifications"
@@ -10949,6 +11097,18 @@ msgctxt "#36042"
 msgid "Use limited colour range (16-235)"
 msgstr "ใช้เฉดสีแบบจำกัด (16-235)"
 
+msgctxt "#36101"
+msgid "Change the look and feel of the user interface."
+msgstr "เปลี่ยนรูปลักษณ์และอารมณ์ ของส่วนติดต่อผู้ใช้."
+
+msgctxt "#36102"
+msgid "Category containing all Skin related settings."
+msgstr "หมวดหมู่ที่ประกอบด้วย การปรับแต่งทั้งหมดที่เกี่ยวกับสกิน."
+
+msgctxt "#36103"
+msgid "Select the skin for the user interface. This will define the look and feel of XBMC."
+msgstr "เลือกหน้าตาของส่วนติดต่อผู้ใช้. ซึ่งจะกำหนดรูปลักษณ์และอารมณ์ของ XBMC."
+
 msgctxt "#36104"
 msgid "Change specific skin settings. The available options are dependent on the skin used."
 msgstr "เปลี่ยนการตั้งค่าเฉพาะของสกิน. ตัวเลือกที่มีจะขึ้นอยู่กับสกินที่ใช้อยู่."
@@ -10961,9 +11121,21 @@ msgctxt "#36106"
 msgid "Change the colours of your selected skin."
 msgstr "เปลี่ยนสีของสกินที่คุณเลือกใช้."
 
+msgctxt "#36107"
+msgid "Choose the fonts displayed in the user interface. The font sets are configured by your skin."
+msgstr "เลือกแบบอักษรที่แสดงในส่วนติดต่อผู้ใช้. ซึ่งชุดตัวอักษรจะถูกกำหนดค่าโดยสกินของคุณ."
+
+msgctxt "#36108"
+msgid "Resize the view of the user interface."
+msgstr "ปรับขนาดมุมมองของส่วนติดต่อผู้ใช้."
+
 msgctxt "#36109"
 msgid "Select the media window that XBMC displays on startup."
 msgstr "เลือกหน้าต่างของสื่อ ที่ XBMC จะแสดงในตอนเริ่มระบบ."
+
+msgctxt "#36110"
+msgid "Select or disable the sound scheme used in the user interface."
+msgstr "เลือกหรือปิด รูปแบบเสียงที่ใช้ในส่วนติดต่อผู้ใช้."
 
 msgctxt "#36111"
 msgid "Turn this off to remove the scrolling RSS news ticker."
@@ -10973,9 +11145,21 @@ msgctxt "#36112"
 msgid "Edit the RSS feeds."
 msgstr "แก้ไข RSS feeds."
 
+msgctxt "#36113"
+msgid "Category containing all locale/regional settings."
+msgstr "หมวดหมู่ที่ประกอบด้วย การตั้งค่าทั้งหมดของ ท้องถิ่น/ภูมิภาค."
+
+msgctxt "#36114"
+msgid "Chooses the language of the user interface."
+msgstr "เลือกภาษาของส่วนติดต่อผู้ใช้."
+
 msgctxt "#36115"
 msgid "Select the formats for temperature, time and date. The available options depend on the selected language."
 msgstr "เลือกรูปแบบของอุณหภูมิ, เวลาและวันที่. ตัวเลือกที่มีขึ้นอยู่กับภาษาที่เลือกไว้."
+
+msgctxt "#36116"
+msgid "Choose which character set is used for displaying text in the user interface."
+msgstr "เลือกชุดอักขระที่จะนำไปใช้ สำหรับการแสดงผลตัวอักษรในส่วนติดต่อผู้ใช้."
 
 msgctxt "#36117"
 msgid "Select country location."
@@ -10992,6 +11176,10 @@ msgstr "เลือกแทร็คเสียงเริ่มต้น �
 msgctxt "#36120"
 msgid "Select the default subtitles when different languages are available."
 msgstr "เลือกคำบรรยายเริ่มต้น เมื่อมีภาษาที่แตกต่างกัน"
+
+msgctxt "#36121"
+msgid "Category containing settings related to how file lists are displayed."
+msgstr "หมวดหมู่ที่ประกอบด้วย การตั้งต่าที่เกียวข้องในวิธีการแสดงรายการแฟ้ม."
 
 msgctxt "#36122"
 msgid "Display the (..) item in lists for visiting the parent folder."
@@ -11172,10 +11360,6 @@ msgstr "เลือกค่าเริ่มต้น ของแหล่�
 msgctxt "#36200"
 msgid "Default scraper used for adding music videos to your library."
 msgstr "ค่าเริ่มต้น ตัวดึงข้อมูล ที่ใช้เพื่อเพิ่ม วิดีโอเพลง ไปยังคลังข้อมูลของคุณ."
-
-msgctxt "#36202"
-msgid "No info available yet."
-msgstr "ยังไม่มีข้อมูล."
 
 msgctxt "#36203"
 msgid "Enable the Personal Video Recorder (PVR) features in XBMC. This requires that at least one PVR Add-on is installed."
@@ -11780,3 +11964,7 @@ msgstr "ตัวเล่น UPnP"
 msgctxt "#37023"
 msgid "Do you wish to stop playback on the remote device?"
 msgstr "คุณต้องการที่จะหยุดการเล่น บนอุปกรณ์ระยะไกล ใช่หรือไม่?"
+
+msgctxt "#37024"
+msgid "Select this if the audio out connection only supports multichannel audio as Dolby Digital 5.1, this allows multichannel audio such as AAC5.1 or FLAC5.1 to be listened to in 5.1 surround sound. Note - Not recommended on Pi as this requires a lot of CPU."
+msgstr "เลือกส่วนนี้ ถ้าการเชื่อมต่อสัญญาณเสียงออก รองรับการเชื่อมต่อหลายช่องสัญญาณเสียงแบบ Dolby Digital 5.1 เท่านั้น, ซึ่งจะทำให้เสียงหลายช่องสัญญาณ เช่น AAC5.1 or FLAC5.1 สามารถรับฟังได้ในแบบ 5.1 รอบทิศทาง. ข้อควรจำ - ไม่แนะนำในการใช้งานบน Pi เพราะต้องใช้ซีพียูบางส่วน."

@@ -1723,11 +1723,11 @@ msgstr "Av"
 
 msgctxt "#475"
 msgid "Music only"
-msgstr "Bara Musik"
+msgstr "Bara musik"
 
 msgctxt "#476"
 msgid "Music & video"
-msgstr "Musik & Video"
+msgstr "Musik & video"
 
 msgctxt "#477"
 msgid "Unable to load playlist"
@@ -1875,11 +1875,11 @@ msgstr "Starta i..."
 
 msgctxt "#521"
 msgid "Compilations"
-msgstr "Kompileringar"
+msgstr "Samlingar"
 
 msgctxt "#522"
 msgid "Remove source"
-msgstr "Ta bort källa"
+msgstr "Radera källa"
 
 msgctxt "#523"
 msgid "Switch media"
@@ -2227,7 +2227,7 @@ msgstr "Virtuell mapp"
 
 msgctxt "#620"
 msgid "Audio CDs"
-msgstr "Ljud-CD"
+msgstr "Ljud-CDs"
 
 msgctxt "#621"
 msgid "Encoder"
@@ -2323,7 +2323,7 @@ msgstr "Måste packa upp en stor fil. Fortsätta?"
 
 msgctxt "#646"
 msgid "Remove from library"
-msgstr "Ta bort från bibliotek"
+msgstr "Radera från bibliotek"
 
 msgctxt "#647"
 msgid "Export video library"
@@ -2431,7 +2431,7 @@ msgstr "Server"
 
 msgctxt "#708"
 msgid "Use an HTTP proxy server to access the internet"
-msgstr "Använd en HTTP-proxyserver för att ansluta till internet"
+msgstr "Använd en HTTP-proxyserver för att ansluta till Internet"
 
 msgctxt "#711"
 msgid "Internet Protocol (IP)"
@@ -2559,7 +2559,7 @@ msgstr "Ingen skannad information för denna vy"
 
 msgctxt "#746"
 msgid "Please turn off library mode"
-msgstr "Stäng av biblioteksläge"
+msgstr "Var god stäng av biblioteksläge"
 
 msgctxt "#747"
 msgid "Error loading image"
@@ -2579,7 +2579,7 @@ msgstr "Är du säker?"
 
 msgctxt "#751"
 msgid "Removing source"
-msgstr "Tar bort källa"
+msgstr "Radera källa"
 
 msgctxt "#754"
 msgid "Add program link"
@@ -2659,11 +2659,11 @@ msgstr "Trådlöst nätverksnamn (ESSID)"
 
 msgctxt "#777"
 msgid "Wireless password"
-msgstr "Lösenord trådlöst nätverk"
+msgstr "Lösenord för trådlöst nätverk"
 
 msgctxt "#778"
 msgid "Wireless security"
-msgstr "Säkerhet trådlöst nätverk"
+msgstr "Säkerhet för trådlöst nätverk"
 
 msgctxt "#779"
 msgid "Save and apply network interface settings"
@@ -3007,7 +3007,7 @@ msgstr "SOCKS5"
 
 msgctxt "#1185"
 msgid "SOCKS5 with remote dns resolving"
-msgstr "SOCKS5 med fjärr-DNS upplösning"
+msgstr "SOCKS5 med fjärr-DNS-uppslag"
 
 msgctxt "#1200"
 msgid "SMB client"
@@ -3035,7 +3035,7 @@ msgstr "Montera SMB-utdelningar"
 
 msgctxt "#1210"
 msgid "Remove"
-msgstr "Ta bort"
+msgstr "Radera"
 
 msgctxt "#1211"
 msgid "Music"
@@ -3135,7 +3135,7 @@ msgstr "Zeroconf"
 
 msgctxt "#1260"
 msgid "Announce these services to other systems via Zeroconf"
-msgstr "Publicera dessa tjänster till andra system via Zeroconf"
+msgstr "Presentera dessa tjänster till andra system via Zeroconf"
 
 msgctxt "#1269"
 msgid "Allow volume control"
@@ -11510,12 +11510,12 @@ msgid "Default scraper used for adding music videos to your library."
 msgstr "Standardskrapa som används för att lägga till musikvideor till ditt bibliotek."
 
 msgctxt "#36201"
-msgid "Category for general settings for PVR/Live TV features."
-msgstr "Kategori med inställningar för PVR/Live-TV"
+msgid "Settings for PVR/Live TV features."
+msgstr "Inställningar för PVR/Live-TV"
 
 msgctxt "#36202"
-msgid "No info available yet."
-msgstr "Ingen info tillgänglig ännu."
+msgid "Category for general settings for PVR/Live TV features."
+msgstr "Kategori med inställningar för PVR/Live-TV"
 
 msgctxt "#36203"
 msgid "Enable the Personal Video Recorder (PVR) features in XBMC. This requires that at least one PVR Add-on is installed."
