@@ -337,6 +337,7 @@
 #if defined(TARGET_ANDROID)
 #include "android/activity/XBMCApp.h"
 #include "android/activity/AndroidFeatures.h"
+#include "android/jni/Build.h"
 #endif
 
 #ifdef TARGET_WINDOWS
@@ -734,6 +735,8 @@ bool CApplication::Create()
   CLog::Log(LOGNOTICE, "Running on Darwin iOS %d-bit %s%s", g_sysinfo.GetKernelBitness(), g_sysinfo.IsAppleTV2() ? "(AppleTV2) " : "", g_sysinfo.GetUnameVersion().c_str());
 #elif defined(TARGET_FREEBSD)
   CLog::Log(LOGNOTICE, "Running on FreeBSD %d-bit %s", g_sysinfo.GetKernelBitness(), g_sysinfo.GetUnameVersion().c_str());
+#elif defined(TARGET_ANDROID)
+  CLog::Log(LOGNOTICE, "Running on Android %d-bit API level %d (%s, %s)", g_sysinfo.GetKernelBitness(), CJNIBuild::SDK_INT, g_sysinfo.GetLinuxDistro().c_str(), g_sysinfo.GetUnameVersion().c_str());
 #elif defined(TARGET_POSIX)
   CLog::Log(LOGNOTICE, "Running on Linux %d-bit (%s, %s)", g_sysinfo.GetKernelBitness(), g_sysinfo.GetLinuxDistro().c_str(), g_sysinfo.GetUnameVersion().c_str());
 #elif defined(TARGET_WINDOWS)
@@ -746,6 +749,13 @@ bool CApplication::Create()
   CLog::Log(LOGNOTICE, "Running with %s rights", (CWIN32Util::IsCurrentUserLocalAdministrator() == TRUE) ? "administrator" : "restricted");
   CLog::Log(LOGNOTICE, "Aero is %s", (g_sysinfo.IsAeroDisabled() == true) ? "disabled" : "enabled");
 #endif
+#if defined(TARGET_ANDROID)
+  CLog::Log(LOGNOTICE,
+        "Product: %s, Device: %s, Board: %s - Manufacturer: %s, Brand: %s, Model: %s, Hardware: %s",
+        CJNIBuild::PRODUCT.c_str(), CJNIBuild::DEVICE.c_str(), CJNIBuild::BOARD.c_str(),
+        CJNIBuild::MANUFACTURER.c_str(), CJNIBuild::BRAND.c_str(), CJNIBuild::MODEL.c_str(), CJNIBuild::HARDWARE.c_str());
+#endif
+
 #if defined(__arm__)
   if (g_cpuInfo.GetCPUFeatures() & CPU_FEATURE_NEON)
     CLog::Log(LOGNOTICE, "ARM Features: Neon enabled");
@@ -1659,7 +1669,10 @@ void CApplication::OnSettingChanged(const CSetting *setting)
       CApplicationMessenger::Get().ExecBuiltIn("ReloadSkin");
   }
   else if (settingId == "lookandfeel.skinzoom")
-    g_windowManager.SendMessage(GUI_MSG_NOTIFY_ALL, 0, 0, GUI_MSG_WINDOW_RESIZE);
+  {
+    CGUIMessage msg(GUI_MSG_NOTIFY_ALL, 0, 0, GUI_MSG_WINDOW_RESIZE);
+    g_windowManager.SendThreadMessage(msg);
+  }
   else if (StringUtils::StartsWithNoCase(settingId, "audiooutput."))
   {
     // AE is master of audio settings and needs to be informed first
@@ -5342,16 +5355,7 @@ void CApplication::SetHardwareVolume(float hardwareVolume)
   hardwareVolume = std::max(VOLUME_MINIMUM, std::min(VOLUME_MAXIMUM, hardwareVolume));
   m_volumeLevel = hardwareVolume;
 
-  float value = 0.0f;
-  if (hardwareVolume > VOLUME_MINIMUM)
-  {
-    float dB = CAEUtil::PercentToGain(hardwareVolume);
-    value = CAEUtil::GainToScale(dB);
-  }
-  if (value >= 0.99f)
-    value = 1.0f;
-
-  CAEFactory::SetVolume(value);
+  CAEFactory::SetVolume(hardwareVolume);
 }
 
 float CApplication::GetVolume(bool percentage /* = true */) const

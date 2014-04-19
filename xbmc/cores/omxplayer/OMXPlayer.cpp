@@ -612,17 +612,9 @@ bool COMXPlayer::OpenFile(const CFileItem &file, const CPlayerOptions &options)
 #endif
 
     Create();
-    if(!m_ready.WaitMSec(g_advancedSettings.m_videoBusyDialogDelay_ms))
-    {
-      CGUIDialogBusy* dialog = (CGUIDialogBusy*)g_windowManager.GetWindow(WINDOW_DIALOG_BUSY);
-      if(dialog)
-      {
-        dialog->Show();
-        while(!m_ready.WaitMSec(1))
-          g_windowManager.ProcessRenderLoop(false);
-        dialog->Close();
-      }
-    }
+
+    // wait for the ready event
+    CGUIDialogBusy::WaitOnEvent(m_ready, g_advancedSettings.m_videoBusyDialogDelay_ms, false);
 
     // Playback might have been stopped due to some error
     if (m_bStop || m_bAbortRequest)
@@ -1075,7 +1067,7 @@ void COMXPlayer::Process()
   if (CDVDInputStream::IMenus* ptr = dynamic_cast<CDVDInputStream::IMenus*>(m_pInputStream))
   {
     CLog::Log(LOGNOTICE, "OMXPlayer: playing a file with menu's");
-    if(CDVDInputStreamNavigator* nav = dynamic_cast<CDVDInputStreamNavigator*>(m_pInputStream))
+    if(dynamic_cast<CDVDInputStreamNavigator*>(m_pInputStream))
       m_PlayerOptions.starttime = 0;
 
     if(m_PlayerOptions.state.size() > 0)
@@ -3291,7 +3283,8 @@ bool COMXPlayer::OpenVideoStream(int iStream, int source, bool reset)
   if(m_CurrentVideo.id    < 0
   || m_CurrentVideo.hint != hint)
   {
-    if (!m_omxPlayerVideo.OpenStream(hint))
+    // discard if it's a picture attachment (e.g. album art embedded in MP3 or AAC)
+    if ((pStream->flags & AV_DISPOSITION_ATTACHED_PIC) || !m_omxPlayerVideo.OpenStream(hint))
     {
       /* mark stream as disabled, to disallaw further attempts */
       CLog::Log(LOGWARNING, "%s - Unsupported stream %d. Stream disabled.", __FUNCTION__, iStream);
@@ -3680,6 +3673,12 @@ int COMXPlayer::OnDVDNavResult(void* pData, int iMessage)
                   "DVDNAV_STILL_FRAME - waiting %i sec, with delay of %d sec",
                   m_dvd.iDVDStillTime, time / 1000);
       }
+    }
+    else if (iMessage == 6)
+    {
+      m_dvd.state = DVDSTATE_NORMAL;
+      CLog::Log(LOGDEBUG, "COMXPlayer::OnDVDNavResult - libbluray read error (DVDSTATE_NORMAL)");
+      CGUIDialogKaiToast::QueueNotification(g_localizeStrings.Get(25008), g_localizeStrings.Get(25009));
     }
 
     return 0;
@@ -4118,7 +4117,7 @@ bool COMXPlayer::HasMenu()
 {
   CDVDInputStream::IMenus* pStream = dynamic_cast<CDVDInputStream::IMenus*>(m_pInputStream);
   if (pStream)
-    return true;
+    return pStream->HasMenu();
   else
     return false;
 }
@@ -4321,6 +4320,10 @@ void COMXPlayer::UpdatePlayState(double timeout)
     state.dts = m_CurrentVideo.dts;
   else if(m_CurrentAudio.dts != DVD_NOPTS_VALUE)
     state.dts = m_CurrentAudio.dts;
+  else if(m_CurrentVideo.startpts != DVD_NOPTS_VALUE)
+    state.dts = m_CurrentVideo.startpts;
+  else if(m_CurrentAudio.startpts != DVD_NOPTS_VALUE)
+    state.dts = m_CurrentAudio.startpts;
 
   if(m_pDemuxer)
   {
