@@ -213,22 +213,16 @@ CBaseTexture* CGUIFontTTFGL::ReallocTexture(unsigned int& newHeight)
   if (m_textureHeight < newHeight)
     CLog::Log(LOGWARNING, "%s: allocated new texture with height of %d, requested %d", __FUNCTION__, m_textureHeight, newHeight);
 
+  memset(newTexture->GetPixels(), 0, m_textureHeight * newTexture->GetPitch());
   if (m_texture)
   {
-    if (m_texture->GetPitch() == newTexture->GetPitch())
+    unsigned char* src = (unsigned char*) m_texture->GetPixels();
+    unsigned char* dst = (unsigned char*) newTexture->GetPixels();
+    for (unsigned int y = 0; y < m_texture->GetHeight(); y++)
     {
-      memcpy(newTexture->GetPixels(), m_texture->GetPixels(), m_texture->GetHeight() * m_texture->GetPitch());
-    }
-    else
-    {
-      unsigned char* src = (unsigned char*)m_texture->GetPixels();
-      unsigned char* dst = (unsigned char*)newTexture->GetPixels();
-      for (unsigned int y = 0; y < m_texture->GetHeight(); y++)
-      {
-        memcpy(dst, src, m_texture->GetPitch());
-        src += m_texture->GetPitch();
-        dst += newTexture->GetPitch();
-      }
+      memcpy(dst, src, m_texture->GetPitch());
+      src += m_texture->GetPitch();
+      dst += newTexture->GetPitch();
     }
     delete m_texture;
   }
