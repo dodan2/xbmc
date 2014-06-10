@@ -44,6 +44,7 @@ using namespace std;
 CGUIFontTTFGL::CGUIFontTTFGL(const CStdString& strFileName)
 : CGUIFontTTFBase(strFileName)
 {
+    m_prevTextureHeight = 0;
 }
 
 CGUIFontTTFGL::~CGUIFontTTFGL(void)
@@ -69,8 +70,12 @@ void CGUIFontTTFGL::Begin()
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
       // Set the texture image -- THIS WORKS, so the pixels must be wrong.
-      glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, m_texture->GetWidth(), m_texture->GetHeight(), 0,
-                   GL_ALPHA, GL_UNSIGNED_BYTE, m_texture->GetPixels());
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, m_texture->GetPitch(), m_texture->GetHeight(), 0,
+                   GL_ALPHA, GL_UNSIGNED_BYTE, 0);
+
+      if (m_prevTextureHeight)
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, m_texture->GetPitch(), m_prevTextureHeight,
+                        GL_ALPHA, GL_UNSIGNED_BYTE, m_texture->GetPixels());
 
       VerifyGLState();
       m_bTextureLoaded = true;
@@ -213,18 +218,34 @@ CBaseTexture* CGUIFontTTFGL::ReallocTexture(unsigned int& newHeight)
   if (m_textureHeight < newHeight)
     CLog::Log(LOGWARNING, "%s: allocated new texture with height of %d, requested %d", __FUNCTION__, m_textureHeight, newHeight);
 
-  memset(newTexture->GetPixels(), 0, m_textureHeight * newTexture->GetPitch());
   if (m_texture)
   {
-    unsigned char* src = (unsigned char*) m_texture->GetPixels();
-    unsigned char* dst = (unsigned char*) newTexture->GetPixels();
-    for (unsigned int y = 0; y < m_texture->GetHeight(); y++)
+    m_prevTextureHeight = m_texture->GetTextureHeight();
+
+    if (m_texture->GetPitch() == newTexture->GetPitch())
     {
-      memcpy(dst, src, m_texture->GetPitch());
-      src += m_texture->GetPitch();
-      dst += newTexture->GetPitch();
+        memcpy(newTexture->GetPixels(), m_texture->GetPixels(), m_texture->GetHeight() * m_texture->GetPitch());
+    }
+    else
+    {
+      unsigned char* src = (unsigned char*) m_texture->GetPixels();
+      unsigned char* dst = (unsigned char*) newTexture->GetPixels();
+      for (unsigned int y = 0; y < m_texture->GetHeight(); y++)
+      {
+        memcpy(dst, src, m_texture->GetPitch());
+        src += m_texture->GetPitch();
+        dst += newTexture->GetPitch();
+      }
     }
     delete m_texture;
+  }
+
+  if (m_bTextureLoaded)
+  {
+    g_graphicsContext.BeginPaint();  //FIXME
+    DeleteHardwareTexture();
+    g_graphicsContext.EndPaint();
+    m_bTextureLoaded = false;
   }
 
   return newTexture;
@@ -239,20 +260,20 @@ bool CGUIFontTTFGL::CopyCharToTexture(FT_BitmapGlyph bitGlyph, unsigned int x1, 
 
   for (unsigned int y = y1; y < y2; y++)
   {
-    memcpy(target, source, x2-x1);
+    memcpy(target, source, bitmap.width);
     source += bitmap.width;
     target += m_texture->GetPitch();
   }
-  // THE SOURCE VALUES ARE THE SAME IN BOTH SITUATIONS.
 
-  // Since we have a new texture, we need to delete the old one
-  // the Begin(); End(); stuff is handled by whoever called us
   if (m_bTextureLoaded)
   {
-    g_graphicsContext.BeginPaint();  //FIXME
-    DeleteHardwareTexture();
-    g_graphicsContext.EndPaint();
-    m_bTextureLoaded = false;
+    glBindTexture(GL_TEXTURE_2D, m_nTexture);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, y1, m_texture->GetPitch(), y2-y1, GL_ALPHA, GL_UNSIGNED_BYTE,
+                    m_texture->GetPixels() + y1 * m_texture->GetPitch());
+  }
+  else
+  {
+    if (m_prevTextureHeight < y2) m_prevTextureHeight = y2;
   }
 
   return TRUE;
