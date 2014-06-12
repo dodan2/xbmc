@@ -407,6 +407,9 @@ class CAdvancedSettings : public ISettingCallback, public ISettingsHandler
     CStdString m_logFolder;
 
     CStdString m_userAgent;
+  
+    bool m_pseudoBorder;
+
 };
 
 XBMC_GLOBAL(CAdvancedSettings,g_advancedSettings);
