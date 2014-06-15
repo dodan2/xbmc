@@ -258,6 +258,7 @@ std::string& StringUtils::Trim(std::string &str, const char* const chars)
 // without this hack "TrimX" functions failed on Win32 with UTF-8 strings
 static int isspace_c(char c)
 {
+  if((unsigned char)c == 0xa0) return 0;
   return ::isspace((unsigned char)c);
 }
 
