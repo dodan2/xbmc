@@ -82,6 +82,8 @@ public:
 
   const CStdString& GetFileName() const { return m_strFileName; };
 
+  void SetCacheCharNum(unsigned int num);
+
 protected:
   struct Character
   {
@@ -115,7 +117,8 @@ protected:
   virtual CBaseTexture* ReallocTexture(unsigned int& newHeight) = 0;
   virtual bool CopyCharToTexture(FT_BitmapGlyph bitGlyph, unsigned int x1, unsigned int y1, unsigned int x2, unsigned int y2) = 0;
   virtual void DeleteHardwareTexture() = 0;
-
+  virtual void ClearTexture() = 0;
+  
   // modifying glyphs
   void EmboldenGlyph(FT_GlyphSlot slot);
   static void ObliqueGlyph(FT_GlyphSlot slot);
@@ -172,6 +175,8 @@ private:
   CGUIFontTTFBase(const CGUIFontTTFBase&);
   CGUIFontTTFBase& operator=(const CGUIFontTTFBase&);
   int m_referenceCount;
+  bool m_fixedTextureHeight;
+  unsigned int m_fixedChars;
 };
 
 #if defined(HAS_GL) || defined(HAS_GLES)

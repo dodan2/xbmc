@@ -31,6 +31,7 @@
 #include "guilib/GUITextLayout.h"
 #include "guilib/GUIFontManager.h"
 #include "guilib/GUIFont.h"
+#include "guilib/GUIFontTTF.h"
 #include "cores/dvdplayer/DVDCodecs/Overlay/DVDOverlayText.h"
 #include "cores/VideoRenderers/RenderManager.h"
 #include "cores/VideoRenderers/OverlayRendererUtil.h"
@@ -73,6 +74,10 @@ static CGUITextLayout* GetFontLayout()
     if (!subtitle_font || !border_font)
       CLog::Log(LOGERROR, "CGUIWindowFullScreen::OnMessage(WINDOW_INIT) - Unable to load subtitle font");
     else
+    {
+      subtitle_font->GetFont()->SetCacheCharNum(100);
+      border_font->GetFont()->SetCacheCharNum(100);
+    }
       return new CGUITextLayout(subtitle_font, true, 0, border_font);
   }
 

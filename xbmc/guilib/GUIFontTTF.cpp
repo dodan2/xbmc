@@ -157,6 +157,8 @@ CGUIFontTTFBase::CGUIFontTTFBase(const CStdString& strFileName)
   m_color = 0;
   m_vertex_count = 0;
   m_nTexture = 0;
+  m_fixedTextureHeight = false;
+  m_fixedChars = 0;
 }
 
 CGUIFontTTFBase::~CGUIFontTTFBase(void)
@@ -180,11 +182,7 @@ void CGUIFontTTFBase::RemoveReference()
 
 void CGUIFontTTFBase::ClearCharacterCache()
 {
-  delete(m_texture);
-
-  DeleteHardwareTexture();
-
-  m_texture = NULL;
+  ClearTexture();
   delete[] m_char;
   m_char = new Character[CHAR_CHUNK];
   memset(m_charquick, 0, sizeof(m_charquick));
@@ -193,7 +191,6 @@ void CGUIFontTTFBase::ClearCharacterCache()
   // set the posX and posY so that our texture will be created on first character write.
   m_posX = m_textureWidth;
   m_posY = -(int)GetTextureLineHeight();
-  m_textureHeight = 0;
 }
 
 void CGUIFontTTFBase::Clear()
@@ -311,6 +308,19 @@ bool CGUIFontTTFBase::Load(const CStdString& strFilename, float height, float as
 
 void CGUIFontTTFBase::DrawTextInternal(float x, float y, const vecColors &colors, const vecText &text, uint32_t alignment, float maxPixelWidth, bool scrolling)
 {
+  if (m_fixedTextureHeight && text.size() > m_fixedChars)
+  {
+    SetCacheCharNum(text.size());
+
+    if (text.size() > m_fixedChars)
+    {
+      CLog::Log(LOGERROR, "%s: Unable to draw text. Texture size is fixed. (%u > %u characters)", __FUNCTION__, text.size(), m_fixedChars);
+      return;
+    }
+    else
+      CLog::Log(LOGDEBUG, "%s: Texture size is increased. (%u > %u characters)", __FUNCTION__, text.size(), m_fixedChars);
+  }
+
   Begin();
 
   // save the origin, which is scaled separately
@@ -602,6 +612,14 @@ bool CGUIFontTTFBase::CacheCharacter(wchar_t letter, uint32_t style, Character *
       {
         // create the new larger texture
         unsigned int newHeight = m_posY + GetTextureLineHeight();
+        
+        if (m_fixedTextureHeight)
+        {
+          CLog::Log(LOGDEBUG, "%s: Cache texture is fixed (%u pixels long)", __FUNCTION__, m_textureHeight);
+          FT_Done_Glyph(glyph);
+          return false;
+        }
+
         // check for max height
         if (newHeight > g_Windowing.GetMaxTextureSize())
         {
@@ -867,4 +885,21 @@ void CGUIFontTTFBase::EmboldenGlyph(FT_GlyphSlot slot)
   slot->metrics.vertAdvance  += dy;
 }
 
+void CGUIFontTTFBase::SetCacheCharNum(unsigned int num)
+{
+  unsigned int height = ((num + CHARS_PER_TEXTURE_LINE - 1) / CHARS_PER_TEXTURE_LINE) * GetTextureLineHeight();
+  height = CBaseTexture::PadPow2(height);
 
+  height = std::min<unsigned int>(height, g_Windowing.GetMaxTextureSize());
+  
+  if (m_textureHeight < height)
+  {
+    m_texture = ReallocTexture(height);
+    if (m_texture)
+    {
+      m_fixedTextureHeight = true;
+      m_fixedChars = height / GetTextureLineHeight() * CHARS_PER_TEXTURE_LINE;
+      m_textureHeight = height;
+    }
+  }
+}
