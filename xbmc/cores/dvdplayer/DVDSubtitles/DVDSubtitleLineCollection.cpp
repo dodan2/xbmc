@@ -20,6 +20,7 @@
 
 #include "DVDSubtitleLineCollection.h"
 #include "DVDClock.h"
+#include "DVDCodecs/Overlay/DVDOverlayText.h"
 
 
 CDVDSubtitleLineCollection::CDVDSubtitleLineCollection()
@@ -77,24 +78,19 @@ void CDVDSubtitleLineCollection::Sort()
 
 CDVDOverlay* CDVDSubtitleLineCollection::Get(double iPts)
 {
-  CDVDOverlay* pOverlay = NULL;
+  CDVDOverlayText* pOverlay = NULL;
 
-  if (m_pCurrent)
+  for (ListElement* p1 = m_pHead; p1->pNext->pNext != NULL; p1 = p1->pNext)
   {
-    while (m_pCurrent && m_pCurrent->pOverlay->iPTSStopTime < iPts)
+    if (p1->pOverlay->iPTSStartTime <= iPts
+	&& (p1->pOverlay->iPTSStopTime >= iPts || p1->pOverlay->iPTSStopTime == 0LL))
     {
-      m_pCurrent = m_pCurrent->pNext;
-    }
-
-    if (m_pCurrent)
-    {
-      pOverlay = m_pCurrent->pOverlay;
-
-      // advance to the next overlay
-      m_pCurrent = m_pCurrent->pNext;
+      if (!pOverlay) pOverlay = new CDVDOverlayText((CDVDOverlayText&)*p1->pOverlay);
+      else pOverlay->AddElement((CDVDOverlayText*)p1->pOverlay);
     }
   }
-  return pOverlay;
+
+  return (CDVDOverlay*) pOverlay;
 }
 
 void CDVDSubtitleLineCollection::Reset()

@@ -164,6 +164,19 @@ public:
     }
   }
 
+  void AddElement(CDVDOverlayText *pOverlay)
+  {
+	for (CElement* e = pOverlay->m_pHead; e; e = e->pNext)
+	{
+      if (e->IsElementType(ELEMENT_TYPE_TEXT))
+        AddElement(new CElementText(*static_cast<CElementText*>(e)));
+      else if (e->IsElementType(ELEMENT_TYPE_PROPERTY))
+        AddElement(new CElementProperty(*static_cast<CElementProperty*>(e)));
+      else
+        AddElement(new CElement(*static_cast<CElement*>(e)));
+    }
+  }
+
   CElement* m_pHead;
   CElement* m_pEnd;
 };
