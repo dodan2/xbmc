@@ -25,6 +25,7 @@
 #include "cores/AudioEngine/Sinks/osx/CoreAudioStream.h"
 
 class AERingBuffer;
+class AEDelayStatus;
 
 class CAESinkDARWINOSX : public IAESink
 {
@@ -36,11 +37,11 @@ public:
 
   virtual bool Initialize(AEAudioFormat &format, std::string &device);
   virtual void Deinitialize();
-  virtual bool IsCompatible(const AEAudioFormat &format, const std::string &device);
 
-  virtual double       GetDelay        ();
+  virtual double       GetDelay        () { return 0.0; /* unused dummy */ }
+  virtual void         GetDelay(AEDelayStatus& status);
   virtual double       GetCacheTotal   ();
-  virtual unsigned int AddPackets      (uint8_t *data, unsigned int frames, bool hasAudio, bool blocking = false);
+  virtual unsigned int AddPackets      (uint8_t **data, unsigned int frames, unsigned int offset);
   virtual void         Drain           ();
   static void          EnumerateDevicesEx(AEDeviceInfoList &list, bool force = false);
 
@@ -49,17 +50,20 @@ private:
   void SetHogMode(bool on);
 
   CAEDeviceInfo      m_info;
-  AEAudioFormat      m_format;
-
-  volatile bool      m_draining;
 
   CCoreAudioDevice   m_device;
   CCoreAudioStream   m_outputStream;
   unsigned int       m_latentFrames;
 
   bool               m_outputBitstream;   ///< true if we're bistreaming into a LinearPCM stream rather than AC3 stream.
-  int16_t           *m_outputBuffer;      ///< buffer for bitstreaming
+  unsigned int       m_planes;            ///< number of audio planes (1 if non-planar)
+  unsigned int       m_frameSizePerPlane; ///< frame size (per plane) in bytes
+  unsigned int       m_framesPerSecond;   ///< sample rate
 
   AERingBuffer      *m_buffer;
   volatile bool      m_started;     // set once we get a callback from CoreAudio, which can take a little while.
+
+  CAESpinSection         m_render_locker;
+  volatile int64_t       m_render_tick;
+  volatile double        m_render_delay;
 };

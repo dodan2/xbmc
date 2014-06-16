@@ -30,7 +30,9 @@
 #include "cores/AudioEngine/Utils/AEChannelInfo.h"
 class IAEStream;
 
-#include "DllAvCodec.h"
+extern "C" {
+#include "libavcodec/avcodec.h"
+}
 
 typedef struct stDVDAudioFrame DVDAudioFrame;
 
@@ -85,10 +87,6 @@ public:
   IAEStream *m_pAudioStream;
 protected:
   CPTSOutputQueue m_time;
-  unsigned int AddPacketsRenderer(unsigned char* data, unsigned int len, CSingleLock &lock);
-  uint8_t*     m_pBuffer; // should be [m_dwPacketSize]
-  unsigned int m_iBufferSize;
-  unsigned int m_dwPacketSize;
   CCriticalSection m_critSection;
 
   int m_iBitrate;

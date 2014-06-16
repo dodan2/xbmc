@@ -73,20 +73,12 @@ static pa_sample_format AEFormatToPulseFormat(AEDataFormat format)
 {
   switch (format)
   {
-    case AE_FMT_U8    : return PA_SAMPLE_U8;
-    case AE_FMT_S16LE : return PA_SAMPLE_S16LE;
-    case AE_FMT_S16BE : return PA_SAMPLE_S16BE;
-    case AE_FMT_S16NE : return PA_SAMPLE_S16NE;
-    case AE_FMT_S24LE3: return PA_SAMPLE_S24LE;
-    case AE_FMT_S24BE3: return PA_SAMPLE_S24BE;
-    case AE_FMT_S24NE3: return PA_SAMPLE_S24NE;
-    case AE_FMT_S24LE4: return PA_SAMPLE_S24_32LE;
-    case AE_FMT_S24BE4: return PA_SAMPLE_S24_32BE;
-    case AE_FMT_S24NE4: return PA_SAMPLE_S24_32NE;
-    case AE_FMT_S32BE : return PA_SAMPLE_S32BE;
-    case AE_FMT_S32LE : return PA_SAMPLE_S32LE;
-    case AE_FMT_S32NE : return PA_SAMPLE_S32NE;
-    case AE_FMT_FLOAT : return PA_SAMPLE_FLOAT32;
+    case AE_FMT_U8     : return PA_SAMPLE_U8;
+    case AE_FMT_S16NE  : return PA_SAMPLE_S16NE;
+    case AE_FMT_S24NE3 : return PA_SAMPLE_S24NE;
+    case AE_FMT_S24NE4 : return PA_SAMPLE_S24_32NE;
+    case AE_FMT_S32NE  : return PA_SAMPLE_S32NE;
+    case AE_FMT_FLOAT  : return PA_SAMPLE_FLOAT32;
 
     case AE_FMT_AC3:
     case AE_FMT_DTS:
@@ -113,17 +105,9 @@ static pa_encoding AEFormatToPulseEncoding(AEDataFormat format)
 
 static AEDataFormat defaultDataFormats[] = {
   AE_FMT_U8,
-  AE_FMT_S16LE,
-  AE_FMT_S16BE,
   AE_FMT_S16NE,
-  AE_FMT_S24LE3,
-  AE_FMT_S24BE3,
   AE_FMT_S24NE3,
-  AE_FMT_S24LE4,
-  AE_FMT_S24BE4,
   AE_FMT_S24NE4,
-  AE_FMT_S32BE,
-  AE_FMT_S32LE,
   AE_FMT_S32NE,
   AE_FMT_FLOAT
 };
@@ -457,6 +441,7 @@ CAESinkPULSE::CAESinkPULSE()
   m_Channels = 0;
   m_Stream = NULL;
   m_Context = NULL;
+  m_IsStreamPaused = false;
 }
 
 CAESinkPULSE::~CAESinkPULSE()
@@ -498,6 +483,14 @@ bool CAESinkPULSE::Initialize(AEAudioFormat &format, std::string &device)
 
   struct pa_channel_map map;
   pa_channel_map_init(&map);
+
+   // PULSE cannot cope with e.g. planar formats so we fallback to FLOAT
+   // when we receive an invalid pulse format
+   if (AEFormatToPulseFormat(format.m_dataFormat) == PA_SAMPLE_INVALID)
+   {
+     CLog::Log(LOGDEBUG, "PULSE does not support format: %s - will fallback to AE_FMT_FLOAT", CAEUtil::DataFormatToStr(format.m_dataFormat));
+     format.m_dataFormat = AE_FMT_FLOAT;
+   }
 
   m_passthrough = AE_IS_RAW(format.m_dataFormat);
 
@@ -547,19 +540,12 @@ bool CAESinkPULSE::Initialize(AEAudioFormat &format, std::string &device)
   pa_format_info_set_channels(info[0], m_Channels);
 
   // PA requires m_encodedRate in order to do EAC3
-  unsigned int samplerate;
-  if (m_passthrough)
+  unsigned int samplerate = format.m_sampleRate;
+  if (m_passthrough && (AEFormatToPulseEncoding(format.m_dataFormat) == PA_ENCODING_EAC3_IEC61937))
   {
-    if (format.m_encodedRate == 0 || format.m_encodedRate > format.m_sampleRate)
-    {
-      CLog::Log(LOGNOTICE, "PulseAudio: Passthrough in use but m_encodedRate is not set or too large: %u - fallback to m_sampleRate", format.m_encodedRate);
-      samplerate = format.m_sampleRate;
-    }
-    else
-      samplerate = format.m_encodedRate;
+    // this is only used internally for PA to use EAC3
+    samplerate = format.m_encodedRate;
   }
-  else
-    samplerate = format.m_sampleRate;
 
   pa_format_info_set_rate(info[0], samplerate);
 
@@ -694,7 +680,12 @@ bool CAESinkPULSE::Initialize(AEAudioFormat &format, std::string &device)
   m_format = format;
   format.m_dataFormat = m_passthrough ? AE_FMT_S16NE : format.m_dataFormat;
 
-  Pause(false);
+  CLog::Log(LOGNOTICE, "PulseAudio: Opened device %s in %s mode with Buffersize %u ms",
+                      device.c_str(), m_passthrough ? "passthrough" : "pcm",
+                      (unsigned int) ((m_BufferSize / (float) m_BytesPerSecond) * 1000));
+
+  // Cork stream will resume when adding first package
+  Pause(true);
   {
     CSingleLock lock(m_sec);
     m_IsAllocated = true;
@@ -720,6 +711,7 @@ void CAESinkPULSE::Deinitialize()
     pa_stream_disconnect(m_Stream);
     pa_stream_unref(m_Stream);
     m_Stream = NULL;
+    m_IsStreamPaused = false;
   }
 
   if (m_Context)
@@ -736,11 +728,13 @@ void CAESinkPULSE::Deinitialize()
   }
 }
 
-double CAESinkPULSE::GetDelay()
+void CAESinkPULSE::GetDelay(AEDelayStatus& status)
 {
   if (!m_IsAllocated)
-    return 0;
-
+  {
+    status.SetDelay(0);
+    return;
+  }
   int error = 0;
   pa_usec_t latency = (pa_usec_t) -1;
   pa_threaded_mainloop_lock(m_MainLoop);
@@ -759,7 +753,7 @@ double CAESinkPULSE::GetDelay()
     latency = (pa_usec_t) 0;
 
   pa_threaded_mainloop_unlock(m_MainLoop);
-  return latency / 1000000.0;
+  status.SetDelay(latency / 1000000.0);
 }
 
 double CAESinkPULSE::GetCacheTotal()
@@ -767,22 +761,28 @@ double CAESinkPULSE::GetCacheTotal()
   return (float)m_BufferSize / (float)m_BytesPerSecond;
 }
 
-unsigned int CAESinkPULSE::AddPackets(uint8_t *data, unsigned int frames, bool hasAudio, bool blocking)
+unsigned int CAESinkPULSE::AddPackets(uint8_t **data, unsigned int frames, unsigned int offset)
 {
   if (!m_IsAllocated)
-    return frames;
+    return 0;
+
+  if (m_IsStreamPaused)
+  {
+    Pause(false);
+  }
 
   pa_threaded_mainloop_lock(m_MainLoop);
 
   unsigned int available = frames * m_format.m_frameSize;
   unsigned int length = 0;
+  void *buffer = data[0]+offset*m_format.m_frameSize;
   // revisit me after Gotham - should use a callback for the write function
   while ((length = pa_stream_writable_size(m_Stream)) == 0)
     pa_threaded_mainloop_wait(m_MainLoop);
 
   length =  std::min((unsigned int)length, available);
 
-  int error = pa_stream_write(m_Stream, data, length, NULL, 0, PA_SEEK_RELATIVE);
+  int error = pa_stream_write(m_Stream, buffer, length, NULL, 0, PA_SEEK_RELATIVE);
   pa_threaded_mainloop_unlock(m_MainLoop);
 
   if (error)
@@ -907,16 +907,15 @@ bool CAESinkPULSE::IsInitialized()
  return m_IsAllocated; 
 }
 
-bool CAESinkPULSE::Pause(bool pause)
+void CAESinkPULSE::Pause(bool pause)
 {
   pa_threaded_mainloop_lock(m_MainLoop);
 
   if (!WaitForOperation(pa_stream_cork(m_Stream, pause ? 1 : 0, NULL, NULL), m_MainLoop, pause ? "Pause" : "Resume"))
     pause = !pause;
 
+  m_IsStreamPaused = pause;
   pa_threaded_mainloop_unlock(m_MainLoop);
-
-  return pause;
 }
 
 inline bool CAESinkPULSE::WaitForOperation(pa_operation *op, pa_threaded_mainloop *mainloop, const char *LogEntry = "")

@@ -105,6 +105,7 @@ CGUIDialogSubtitles::CGUIDialogSubtitles(void)
   m_serviceItems = new CFileItemList;
   m_pausedOnRun = false;
   m_updateSubsList = false;
+  m_LastAutoDownloaded = "";
 }
 
 CGUIDialogSubtitles::~CGUIDialogSubtitles(void)
@@ -358,6 +359,16 @@ void CGUIDialogSubtitles::OnSearchComplete(const CFileItemList *items)
   m_subtitles->Assign(*items);
   UpdateStatus(SEARCH_COMPLETE);
   m_updateSubsList = true;
+
+  if (!items->IsEmpty() && g_application.m_pPlayer->GetSubtitleCount() == 0 &&
+    m_LastAutoDownloaded != g_application.CurrentFile() && CSettings::Get().GetBool("subtitles.downloadfirst"))
+  {
+    CFileItemPtr item = items->Get(0);
+    CLog::Log(LOGDEBUG, "%s - Automatically download first subtitle: %s", __FUNCTION__, item->GetLabel2().c_str());
+    m_LastAutoDownloaded = g_application.CurrentFile();
+    Download(*item);
+  }
+
   SetInvalid();
 }
 
@@ -423,7 +434,7 @@ void CGUIDialogSubtitles::OnDownloadComplete(const CFileItemList *items, const s
 
   CStdString strDownloadPath = "special://temp";
   CStdString strDestPath;
-  std::vector<CStdString> vecFiles;
+  std::vector<std::string> vecFiles;
 
   CStdString strCurrentFilePath;
   if (StringUtils::StartsWith(strCurrentFilePath, "http://"))
@@ -492,7 +503,7 @@ void CGUIDialogSubtitles::OnDownloadComplete(const CFileItemList *items, const s
     CStdString strDownloadFile = URIUtils::ChangeBasePath(strCurrentFilePath, strSubName, strDownloadPath);
     CStdString strDestFile = strDownloadFile;
 
-    if (!CFile::Cache(strUrl, strDownloadFile))
+    if (!CFile::Copy(strUrl, strDownloadFile))
     {
       CGUIDialogKaiToast::QueueNotification(CGUIDialogKaiToast::Error, strSubName, g_localizeStrings.Get(24113));
       CLog::Log(LOGERROR, "%s - Saving of subtitle %s to %s failed", __FUNCTION__, strUrl.c_str(), strDownloadFile.c_str());
@@ -510,7 +521,7 @@ void CGUIDialogSubtitles::OnDownloadComplete(const CFileItemList *items, const s
          * items end up in the same folder
          */
         CLog::Log(LOGDEBUG, "%s - Saving subtitle %s to %s", __FUNCTION__, strDownloadFile.c_str(), strTryDestFile.c_str());
-        if (CFile::Cache(strDownloadFile, strTryDestFile))
+        if (CFile::Copy(strDownloadFile, strTryDestFile))
         {
           CFile::Delete(strDownloadFile);
           strDestFile = strTryDestFile;
@@ -536,7 +547,7 @@ void CGUIDialogSubtitles::OnDownloadComplete(const CFileItemList *items, const s
           CStdString strSubNameIdx = StringUtils::Format("%s.%s.idx", strFileName.c_str(), strSubLang.c_str());
           // Handle URL encoding:
           strDestFile = URIUtils::ChangeBasePath(strCurrentFilePath, strSubNameIdx, strDestPath);
-          CFile::Cache(strUrl, strDestFile);
+          CFile::Copy(strUrl, strDestFile);
         }
       }
 
@@ -575,8 +586,8 @@ void CGUIDialogSubtitles::SetSubtitles(const std::string &subtitle)
     {
       g_application.m_pPlayer->SetSubtitle(nStream);
       g_application.m_pPlayer->SetSubtitleVisible(true);
-      CMediaSettings::Get().GetCurrentVideoSettings().m_SubtitleDelay = 0.0f;
-      g_application.m_pPlayer->SetSubTitleDelay(0);
+      CMediaSettings::Get().GetCurrentVideoSettings().m_SubtitleDelay = CMediaSettings::Get().GetDefaultVideoSettings().m_SubtitleDelay;
+      g_application.m_pPlayer->SetSubTitleDelay(CMediaSettings::Get().GetCurrentVideoSettings().m_SubtitleDelay);
     }
   }
 }

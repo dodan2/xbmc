@@ -17,10 +17,11 @@
  *  <http://www.gnu.org/licenses/>.
  *
  */
+#include <Platinum/Source/Platinum/Platinum.h>
+
 #include "UPnPInternal.h"
 #include "UPnP.h"
 #include "UPnPServer.h"
-#include "Platinum.h"
 #include "URL.h"
 #include "Util.h"
 #include "settings/AdvancedSettings.h"
@@ -262,19 +263,16 @@ PopulateObjectFromTag(CVideoInfoTag&         tag,
                       PLT_MediaItemResource* resource,  /* = NULL */
                       EClientQuirks          quirks)
 {
-    // some usefull buffers
-    CStdStringArray strings;
-
     if (!tag.m_strFileNameAndPath.empty() && file_path)
       *file_path = tag.m_strFileNameAndPath;
 
     if (tag.m_iDbId != -1 ) {
-        if (tag.m_type == "musicvideo") {
+        if (tag.m_type == MediaTypeMusicVideo) {
           object.m_ObjectClass.type = "object.item.videoItem.musicVideoClip";
           object.m_Creator = StringUtils::Join(tag.m_artist, g_advancedSettings.m_videoItemSeparator);
           object.m_Title = tag.m_strTitle;
           object.m_ReferenceID = NPT_String::Format("videodb://musicvideos/titles/%i", tag.m_iDbId);
-        } else if (tag.m_type == "movie") {
+        } else if (tag.m_type == MediaTypeMovie) {
           object.m_ObjectClass.type = "object.item.videoItem.movie";
           object.m_Title = tag.m_strTitle;
           object.m_Date = CDateTime(tag.m_iYear, 0, 0, 0, 0, 0).GetAsW3CDate();
@@ -299,6 +297,13 @@ PopulateObjectFromTag(CVideoInfoTag&         tag,
 
     if(object.m_ReferenceID == object.m_ObjectID)
         object.m_ReferenceID = "";
+
+    for (unsigned int index = 0; index < tag.m_studio.size(); index++)
+        object.m_People.publisher.Add(tag.m_studio[index].c_str());
+
+    object.m_XbmcInfo.date_added = tag.m_dateAdded.GetAsDBDate();
+    object.m_XbmcInfo.rating = tag.m_fRating;
+    object.m_XbmcInfo.votes = tag.m_strVotes;
 
     for (unsigned int index = 0; index < tag.m_genre.size(); index++)
       object.m_Affiliation.genres.Add(tag.m_genre.at(index).c_str());
@@ -443,8 +448,6 @@ BuildObject(CFileItem&                    item,
         container->m_ObjectClass.type = "object.container";
         container->m_ChildrenCount = -1;
 
-        CStdStringArray strings;
-
         /* this might be overkill, but hey */
         if (item.IsMusicDb()) {
             MUSICDATABASEDIRECTORY::NODE_TYPE node = CMusicDatabaseDirectory::GetDirectoryType(item.GetPath());
@@ -564,31 +567,38 @@ BuildObject(CFileItem&                    item,
         }
     }
 
-    // determine the correct artwork for this item
-    if (!thumb_loader.IsNull())
-        thumb_loader->LoadItem(&item);
+    if (upnp_server) {
+        // determine the correct artwork for this item
+        if (!thumb_loader.IsNull())
+            thumb_loader->LoadItem(&item);
 
-    // finally apply the found artwork
-    thumb = item.GetArt("thumb");
-    if (upnp_server && !thumb.empty()) {
-        PLT_AlbumArtInfo art;
-        art.uri = upnp_server->BuildSafeResourceUri(
-            rooturi,
-            (*ips.GetFirstItem()).ToString(),
-            CTextureUtils::GetWrappedImageURL(thumb).c_str());
+        // finally apply the found artwork
+        thumb = item.GetArt("thumb");
+        if (!thumb.empty()) {
+            PLT_AlbumArtInfo art;
+            art.uri = upnp_server->BuildSafeResourceUri(
+                rooturi,
+                (*ips.GetFirstItem()).ToString(),
+                CTextureUtils::GetWrappedImageURL(thumb).c_str());
 
-        // Set DLNA profileID by extension, defaulting to JPEG.
-        if (URIUtils::HasExtension(thumb, ".png")) {
-            art.dlna_profile = "PNG_TN";
-        } else {
-            art.dlna_profile = "JPEG_TN";
+            // Set DLNA profileID by extension, defaulting to JPEG.
+            if (URIUtils::HasExtension(thumb, ".png")) {
+                art.dlna_profile = "PNG_TN";
+            } else {
+                art.dlna_profile = "JPEG_TN";
+            }
+            object->m_ExtraInfo.album_arts.Add(art);
         }
-        object->m_ExtraInfo.album_arts.Add(art);
-    }
 
-    fanart = item.GetArt("fanart");
-    if (upnp_server && !fanart.empty())
-        upnp_server->AddSafeResourceUri(object, rooturi, ips, CTextureUtils::GetWrappedImageURL(fanart), "xbmc.org:*:fanart:*");
+        for (CGUIListItem::ArtMap::const_iterator itArtwork = item.GetArt().begin(); itArtwork != item.GetArt().end(); ++itArtwork) {
+            if (!itArtwork->first.empty() && !itArtwork->second.empty()) {
+                std::string wrappedUrl = CTextureUtils::GetWrappedImageURL(itArtwork->second);
+                object->m_XbmcInfo.artwork.Add(itArtwork->first.c_str(),
+                  upnp_server->BuildSafeResourceUri(rooturi, (*ips.GetFirstItem()).ToString(), wrappedUrl.c_str()));
+                upnp_server->AddSafeResourceUri(object, rooturi, ips, wrappedUrl.c_str(), ("xbmc.org:*:" + itArtwork->first + ":*").c_str());
+            }
+        }
+    }
 
     return object;
 
@@ -657,7 +667,7 @@ PopulateTagFromObject(CVideoInfoTag&         tag,
 
     if(!object.m_Recorded.program_title.IsEmpty())
     {
-        tag.m_type = "episode";
+        tag.m_type = MediaTypeEpisode;
         int episode;
         int season;
         int title = object.m_Recorded.program_title.Find(" : ");
@@ -673,22 +683,30 @@ PopulateTagFromObject(CVideoInfoTag&         tag,
         tag.m_firstAired = date;
     }
     else if (!object.m_Recorded.series_title.IsEmpty()) {
-        tag.m_type= "season";
+        tag.m_type= MediaTypeSeason;
         tag.m_strTitle = object.m_Title; // because could be TV show Title, or Season 1 etc
         tag.m_iSeason  = object.m_Recorded.episode_number / 100;
         tag.m_iEpisode = object.m_Recorded.episode_number % 100;
         tag.m_premiered = date;
     }
     else if(object.m_ObjectClass.type == "object.item.videoItem.musicVideoClip") {
-        tag.m_type = "musicvideo";
+        tag.m_type = MediaTypeMusicVideo;
     }
     else
     {
-        tag.m_type         = "movie";
+        tag.m_type         = MediaTypeMovie;
         tag.m_strTitle     = object.m_Title;
         tag.m_premiered    = date;
     }
     tag.m_iYear       = date.GetYear();
+
+    for (unsigned int index = 0; index < object.m_People.publisher.GetItemCount(); index++)
+        tag.m_studio.push_back(object.m_People.publisher.GetItem(index)->GetChars());
+
+    tag.m_dateAdded.SetFromDateString((const char*)object.m_XbmcInfo.date_added);
+    tag.m_fRating = object.m_XbmcInfo.rating;
+    tag.m_strVotes = object.m_XbmcInfo.votes;
+
     for (unsigned int index = 0; index < object.m_Affiliation.genres.GetItemCount(); index++)
     {
       // ignore single "Unknown" genre inserted by Platinum
@@ -810,14 +828,10 @@ CFileItemPtr BuildObject(PLT_MediaObject* entry)
   else if(entry->m_Description.icon_uri.GetLength())
     pItem->SetArt("thumb", (const char*) entry->m_Description.icon_uri);
 
-  PLT_ProtocolInfo fanart_mask("xbmc.org", "*", "fanart", "*");
-  for(unsigned i = 0; i < entry->m_Resources.GetItemCount(); ++i) {
-    PLT_MediaItemResource& res = entry->m_Resources[i];
-    if(res.m_ProtocolInfo.Match(fanart_mask)) {
-      pItem->SetArt("fanart", (const char*)res.m_Uri);
-      break;
-    }
-  }
+  for (unsigned int index = 0; index < entry->m_XbmcInfo.artwork.GetItemCount(); index++)
+      pItem->SetArt(entry->m_XbmcInfo.artwork.GetItem(index)->type.GetChars(),
+                    entry->m_XbmcInfo.artwork.GetItem(index)->url.GetChars());
+
   // set the watched overlay, as this will not be set later due to
   // content set on file item list
   if (pItem->HasVideoInfoTag()) {
@@ -825,14 +839,14 @@ CFileItemPtr BuildObject(PLT_MediaObject* entry)
     int played   = pItem->GetVideoInfoTag()->m_playCount;
     const std::string& type = pItem->GetVideoInfoTag()->m_type;
     bool watched(false);
-    if (type == "tvshow" || type == "season") {
+    if (type == MediaTypeTvShow || type == MediaTypeSeason) {
       pItem->SetProperty("totalepisodes", episodes);
       pItem->SetProperty("numepisodes", episodes);
       pItem->SetProperty("watchedepisodes", played);
       pItem->SetProperty("unwatchedepisodes", episodes - played);
       watched = (episodes && played == episodes);
     }
-    else if (type == "episode" || type == "movie")
+    else if (type == MediaTypeEpisode || type == MediaTypeMovie)
       watched = (played > 0);
     pItem->SetOverlayImage(CGUIListItem::ICON_OVERLAY_UNWATCHED, watched);
   }

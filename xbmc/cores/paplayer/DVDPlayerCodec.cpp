@@ -20,6 +20,7 @@
 
 #include "DVDPlayerCodec.h"
 #include "cores/AudioEngine/Utils/AEUtil.h"
+#include "cores/AudioEngine/Engines/ActiveAE/ActiveAEResample.h"
 
 #include "cores/dvdplayer/DVDInputStreams/DVDFactoryInputStream.h"
 #include "cores/dvdplayer/DVDDemuxers/DVDFactoryDemuxer.h"
@@ -42,10 +43,12 @@ DVDPlayerCodec::DVDPlayerCodec()
   m_nAudioStream = -1;
   m_audioPos = 0;
   m_pPacket = NULL;
-  m_decoded = NULL;
   m_nDecodedLen = 0;
   m_strFileName = "";
   m_bInited = false;
+  m_pResampler = NULL;
+  m_needConvert = false;
+  m_srcFrameSize = 0;
 }
 
 DVDPlayerCodec::~DVDPlayerCodec()
@@ -71,7 +74,6 @@ bool DVDPlayerCodec::Init(const CStdString &strFile, unsigned int filecache)
     DeInit();
   }
 
-  m_decoded = NULL;
   m_nDecodedLen = 0;
 
   CStdString strFileToOpen = strFile;
@@ -194,17 +196,20 @@ bool DVDPlayerCodec::Init(const CStdString &strFile, unsigned int filecache)
   }
 
   // test if seeking is supported
-  if (Seek(1) != DVD_NOPTS_VALUE)
+  m_bCanSeek = false;
+  if (m_pInputStream->Seek(0, SEEK_POSSIBLE))
   {
-    // rewind stream to beginning
-    Seek(0);
-    m_bCanSeek = true;
-  }
-  else
-  {
-    m_pInputStream->Seek(0, SEEK_SET);
-    m_pDemuxer->Reset();
-    m_bCanSeek = false;
+    if (Seek(1) != DVD_NOPTS_VALUE)
+    {
+      // rewind stream to beginning
+      Seek(0);
+      m_bCanSeek = true;
+    }
+    else
+    {
+      m_pInputStream->Seek(0, SEEK_SET);
+      m_pDemuxer->Reset();
+    }
   }
 
   if (m_Channels == 0) // no data - just guess and hope for the best
@@ -220,6 +225,34 @@ bool DVDPlayerCodec::Init(const CStdString &strFile, unsigned int filecache)
     m_Bitrate = (int)(((m_pInputStream->GetLength()*1000) / m_TotalTime) * 8);
   }
   m_pDemuxer->GetStreamCodecName(m_nAudioStream,m_CodecName);
+
+  m_needConvert = false;
+  if (NeedConvert(m_DataFormat))
+  {
+    m_needConvert = true;
+    m_pResampler = new ActiveAE::CActiveAEResample();
+    m_pResampler->Init(ActiveAE::CActiveAEResample::GetAVChannelLayout(m_ChannelInfo),
+                       m_ChannelInfo.Count(),
+                       m_SampleRate,
+                       ActiveAE::CActiveAEResample::GetAVSampleFormat(AE_FMT_FLOAT),
+                       CAEUtil::DataFormatToUsedBits(AE_FMT_FLOAT),
+                       CAEUtil::DataFormatToDitherBits(AE_FMT_FLOAT),
+                       ActiveAE::CActiveAEResample::GetAVChannelLayout(m_ChannelInfo),
+                       m_ChannelInfo.Count(),
+                       m_SampleRate,
+                       ActiveAE::CActiveAEResample::GetAVSampleFormat(m_DataFormat),
+                       CAEUtil::DataFormatToUsedBits(m_DataFormat),
+                       CAEUtil::DataFormatToDitherBits(m_DataFormat),
+                       false,
+                       false,
+                       NULL,
+                       AE_QUALITY_UNKNOWN);
+    m_planes = AE_IS_PLANAR(m_DataFormat) ? m_ChannelInfo.Count() : 1;
+    m_srcFormat = m_DataFormat;
+    m_srcFrameSize = (CAEUtil::DataFormatToBits(m_DataFormat)>>3) * m_ChannelInfo.Count();
+    m_DataFormat = AE_FMT_FLOAT;
+    m_BitsPerSample = CAEUtil::DataFormatToBits(m_DataFormat);
+  }
 
   m_strFileName = strFile;
   m_bInited = true;
@@ -251,6 +284,9 @@ void DVDPlayerCodec::DeInit()
     m_pAudioCodec = NULL;
   }
 
+  delete m_pResampler;
+  m_pResampler = NULL;
+
   // cleanup format information
   m_TotalTime = 0;
   m_SampleRate = 0;
@@ -261,7 +297,6 @@ void DVDPlayerCodec::DeInit()
   m_Bitrate = 0;
 
   m_audioPos = 0;
-  m_decoded = NULL;
   m_nDecodedLen = 0;
 
   m_strFileName = "";
@@ -270,14 +305,20 @@ void DVDPlayerCodec::DeInit()
 
 int64_t DVDPlayerCodec::Seek(int64_t iSeekTime)
 {
+  // default to announce backwards seek if !m_pPacket to not make FFmpeg
+  // skip mpeg audio frames at playback start
+  bool seekback = true;
+
   if (m_pPacket)
+  {
+    seekback = (DVD_MSEC_TO_TIME(iSeekTime) > m_pPacket->pts);
     CDVDDemuxUtils::FreeDemuxPacket(m_pPacket);
+  }
   m_pPacket = NULL;
 
-  bool ret = m_pDemuxer->SeekTime((int)iSeekTime, false);
+  bool ret = m_pDemuxer->SeekTime((int)iSeekTime, seekback);
   m_pAudioCodec->Reset();
 
-  m_decoded = NULL;
   m_nDecodedLen = 0;
 
   if (!ret)
@@ -288,17 +329,29 @@ int64_t DVDPlayerCodec::Seek(int64_t iSeekTime)
 
 int DVDPlayerCodec::ReadPCM(BYTE *pBuffer, int size, int *actualsize)
 {
-  if (m_decoded && m_nDecodedLen > 0)
+  if (m_nDecodedLen > 0)
   {
     int nLen = (size<m_nDecodedLen)?size:m_nDecodedLen;
     *actualsize = nLen;
-    memcpy(pBuffer, m_decoded, *actualsize);
+    if (m_needConvert)
+    {
+      int samples = *actualsize / (m_BitsPerSample>>3);
+      int frames = samples / m_Channels;
+      m_pResampler->Resample(&pBuffer, frames, m_audioPlanes, frames, 1.0);
+      for (int i=0; i<m_planes; i++)
+      {
+        m_audioPlanes[i] += frames*m_srcFrameSize/m_planes;
+      }
+    }
+    else
+    {
+      memcpy(pBuffer, m_audioPlanes[0], *actualsize);
+      m_audioPlanes[0] += (*actualsize);
+    }
     m_nDecodedLen -= nLen;
-    m_decoded += (*actualsize);
     return READ_SUCCESS;
   }
 
-  m_decoded = NULL;
   m_nDecodedLen = 0;
 
   // dvdplayer returns a read error on a single invalid packet, while
@@ -344,14 +397,30 @@ int DVDPlayerCodec::ReadPCM(BYTE *pBuffer, int size, int *actualsize)
 
   m_audioPos += decodeLen;
 
-  m_nDecodedLen = m_pAudioCodec->GetData(&m_decoded);
+  // scale decoded bytes to destination format
+  m_nDecodedLen = m_pAudioCodec->GetData(m_audioPlanes);
+  if (m_needConvert)
+    m_nDecodedLen *= (m_BitsPerSample>>3) / (m_srcFrameSize / m_Channels);
 
   *actualsize = (m_nDecodedLen <= size) ? m_nDecodedLen : size;
   if (*actualsize > 0)
   {
-    memcpy(pBuffer, m_decoded, *actualsize);
+    if (m_needConvert)
+    {
+      int samples = *actualsize / (m_BitsPerSample>>3);
+      int frames = samples / m_Channels;
+      m_pResampler->Resample(&pBuffer, frames, m_audioPlanes, frames, 1.0);
+      for (int i=0; i<m_planes; i++)
+      {
+        m_audioPlanes[i] += frames*m_srcFrameSize/m_planes;
+      }
+    }
+    else
+    {
+      memcpy(pBuffer, m_audioPlanes[0], *actualsize);
+      m_audioPlanes[0] += *actualsize;
+    }
     m_nDecodedLen -= *actualsize;
-    m_decoded += (*actualsize);
   }
 
   return READ_SUCCESS;
@@ -365,4 +434,22 @@ bool DVDPlayerCodec::CanInit()
 bool DVDPlayerCodec::CanSeek()
 {
   return m_bCanSeek;
+}
+
+bool DVDPlayerCodec::NeedConvert(AEDataFormat fmt)
+{
+  if (AE_IS_RAW(fmt))
+    return false;
+
+  switch(fmt)
+  {
+    case AE_FMT_U8:
+    case AE_FMT_S16NE:
+    case AE_FMT_S32NE:
+    case AE_FMT_FLOAT:
+    case AE_FMT_DOUBLE:
+      return false;
+    default:
+      return true;
+  }
 }

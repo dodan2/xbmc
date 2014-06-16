@@ -260,7 +260,7 @@ string ByEpisodeNumber(SortAttribute attributes, const SortItem &values)
     num = ((uint64_t)values.at(FieldSeason).asInteger() << 32) + (values.at(FieldEpisodeNumber).asInteger() << 16);
 
   std::string title;
-  if (values.find(FieldMediaType) != values.end() && values.at(FieldMediaType).asInteger() == MediaTypeMovie)
+  if (values.find(FieldMediaType) != values.end() && values.at(FieldMediaType).asString() == MediaTypeMovie)
     title = BySortTitle(attributes, values);
   if (title.empty())
     title = ByLabel(attributes, values);
@@ -628,10 +628,10 @@ void SortUtils::Sort(SortBy sortBy, SortOrder sortOrder, SortAttribute attribute
       Fields sortingFields = GetFieldsForSorting(sortBy);
 
       // Prepare the string used for sorting and store it under FieldSort
-      for (DatabaseResults::iterator item = items.begin(); item != items.end(); item++)
+      for (DatabaseResults::iterator item = items.begin(); item != items.end(); ++item)
       {
         // add all fields to the item that are required for sorting if they are currently missing
-        for (Fields::const_iterator field = sortingFields.begin(); field != sortingFields.end(); field++)
+        for (Fields::const_iterator field = sortingFields.begin(); field != sortingFields.end(); ++field)
         {
           if (item->find(*field) == item->end())
             item->insert(pair<Field, CVariant>(*field, CVariant::ConstNullVariant));
@@ -667,10 +667,10 @@ void SortUtils::Sort(SortBy sortBy, SortOrder sortOrder, SortAttribute attribute
       Fields sortingFields = GetFieldsForSorting(sortBy);
 
       // Prepare the string used for sorting and store it under FieldSort
-      for (SortItems::iterator item = items.begin(); item != items.end(); item++)
+      for (SortItems::iterator item = items.begin(); item != items.end(); ++item)
       {
         // add all fields to the item that are required for sorting if they are currently missing
-        for (Fields::const_iterator field = sortingFields.begin(); field != sortingFields.end(); field++)
+        for (Fields::const_iterator field = sortingFields.begin(); field != sortingFields.end(); ++field)
         {
           if ((*item)->find(*field) == (*item)->end())
             (*item)->insert(pair<Field, CVariant>(*field, CVariant::ConstNullVariant));
@@ -705,7 +705,7 @@ void SortUtils::Sort(const SortDescription &sortDescription, SortItems& items)
   Sort(sortDescription.sortBy, sortDescription.sortOrder, sortDescription.sortAttributes, items, sortDescription.limitEnd, sortDescription.limitStart);
 }
 
-bool SortUtils::SortFromDataset(const SortDescription &sortDescription, MediaType mediaType, const std::auto_ptr<dbiplus::Dataset> &dataset, DatabaseResults &results)
+bool SortUtils::SortFromDataset(const SortDescription &sortDescription, const MediaType &mediaType, const std::auto_ptr<dbiplus::Dataset> &dataset, DatabaseResults &results)
 {
   FieldList fields;
   if (!DatabaseUtils::GetSelectFields(SortUtils::GetFieldsForSorting(sortDescription.sortBy), mediaType, fields))

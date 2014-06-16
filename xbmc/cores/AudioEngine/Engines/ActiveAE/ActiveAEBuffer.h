@@ -19,11 +19,14 @@
  *
  */
 
-#include "DllAvUtil.h"
-#include "DllSwResample.h"
 #include "cores/AudioEngine/Utils/AEAudioFormat.h"
 #include "cores/AudioEngine/Interfaces/AE.h"
 #include <deque>
+
+extern "C" {
+#include "libavutil/avutil.h"
+#include "libswresample/swresample.h"
+}
 
 namespace ActiveAE
 {
@@ -35,6 +38,7 @@ struct SampleConfig
   int channels;
   int sample_rate;
   int bits_per_sample;
+  int dither_bits;
 };
 
 /**
@@ -66,7 +70,9 @@ public:
   void Return();
   CSoundPacket *pkt;
   CActiveAEBufferPool *pool;
-  unsigned int timestamp;
+  int64_t timestamp;
+  int clockId;
+  int pkt_start_offset;
   int refCount;
 };
 
@@ -92,7 +98,7 @@ public:
   virtual ~CActiveAEBufferPoolResample();
   virtual bool Create(unsigned int totaltime, bool remap, bool upmix, bool normalize = true);
   void ChangeResampler();
-  bool ResampleBuffers(unsigned int timestamp = 0);
+  bool ResampleBuffers(int64_t timestamp = 0);
   float GetDelay();
   void Flush();
   AEAudioFormat m_inputFormat;
@@ -109,6 +115,7 @@ public:
   AEQuality m_resampleQuality;
   bool m_stereoUpmix;
   bool m_normalize;
+  int64_t m_lastSamplePts;
 };
 
 }

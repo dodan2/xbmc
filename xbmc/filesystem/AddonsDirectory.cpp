@@ -47,8 +47,9 @@ CAddonsDirectory::CAddonsDirectory(void)
 CAddonsDirectory::~CAddonsDirectory(void)
 {}
 
-bool CAddonsDirectory::GetDirectory(const CStdString& strPath, CFileItemList &items)
+bool CAddonsDirectory::GetDirectory(const CURL& url, CFileItemList &items)
 {
+  const CStdString strPath(url.Get());
   CStdString path1(strPath);
   URIUtils::RemoveSlashAtEnd(path1);
   CURL path(path1);
@@ -78,9 +79,21 @@ bool CAddonsDirectory::GetDirectory(const CStdString& strPath, CFileItemList &it
   {
     reposAsFolders = false;
     groupAddons = false;
+    // ensure our repos are up to date
+    CAddonInstaller::Get().UpdateRepos(false, true);
     CAddonMgr::Get().GetAllOutdatedAddons(addons);
     items.SetProperty("reponame",g_localizeStrings.Get(24043));
     items.SetLabel(g_localizeStrings.Get(24043));
+  }
+  else if (path.GetHostName().Equals("check"))
+  {
+    reposAsFolders = false;
+    groupAddons = false;
+    // force a refresh
+    CAddonInstaller::Get().UpdateRepos(true, true);
+    CAddonMgr::Get().GetAllOutdatedAddons(addons);
+    items.SetProperty("reponame",g_localizeStrings.Get(24055));
+    items.SetLabel(g_localizeStrings.Get(24055));
   }
   else if (path.GetHostName().Equals("repos"))
   {
@@ -139,7 +152,7 @@ bool CAddonsDirectory::GetDirectory(const CStdString& strPath, CFileItemList &it
   {
     if (groupAddons)
     {
-      for (int i=ADDON_UNKNOWN+1;i<ADDON_VIZ_LIBRARY;++i)
+      for (int i=ADDON_UNKNOWN+1;i<ADDON_MAX;++i)
       {
         for (unsigned int j=0;j<addons.size();++j)
         {
@@ -187,7 +200,7 @@ bool CAddonsDirectory::GetDirectory(const CStdString& strPath, CFileItemList &it
       AddonPtr addon2;
       database.GetAddon(items[i]->GetProperty("Addon.ID").asString(),addon2);
       if (addon2 && addon2->Version() > AddonVersion(items[i]->GetProperty("Addon.Version").asString())
-                 && !database.IsAddonBlacklisted(addon2->ID(),addon2->Version().c_str()))
+                 && !database.IsAddonBlacklisted(addon2->ID(),addon2->Version().asString()))
       {
         items[i]->SetProperty("Addon.Status",g_localizeStrings.Get(24068));
         items[i]->SetProperty("Addon.UpdateAvail", true);
@@ -200,7 +213,8 @@ bool CAddonsDirectory::GetDirectory(const CStdString& strPath, CFileItemList &it
     item->SetLabel(g_localizeStrings.Get(24032));
     items.Add(item);
   }
-  else if (path.GetHostName().Equals("outdated") && items.Size() > 1)
+  else if ((path.GetHostName().Equals("outdated") ||
+            path.GetHostName().Equals("check")) && items.Size() > 1)
   {
     CFileItemPtr item(new CFileItem("addons://update_all/", true));
     item->SetLabel(g_localizeStrings.Get(24122));
@@ -264,7 +278,7 @@ CFileItemPtr CAddonsDirectory::FileItemFromAddon(const AddonPtr &addon, const CS
   item->SetLabel(strLabel);
 
   if (!(basePath.Equals("addons://") && addon->Type() == ADDON_REPOSITORY))
-    item->SetLabel2(addon->Version().c_str());
+    item->SetLabel2(addon->Version().asString());
   item->SetArt("thumb", addon->Icon());
   item->SetLabelPreformated(true);
   item->SetIconImage("DefaultAddon.png");

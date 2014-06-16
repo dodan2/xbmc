@@ -68,16 +68,16 @@ static const TypeMapping types[] =
    {"xbmc.metadata.scraper.movies",      ADDON_SCRAPER_MOVIES,      24007, "DefaultAddonMovieInfo.png" },
    {"xbmc.metadata.scraper.musicvideos", ADDON_SCRAPER_MUSICVIDEOS, 24015, "DefaultAddonMusicVideoInfo.png" },
    {"xbmc.metadata.scraper.tvshows",     ADDON_SCRAPER_TVSHOWS,     24014, "DefaultAddonTvInfo.png" },
-   {"xbmc.metadata.scraper.library",     ADDON_SCRAPER_LIBRARY,         0, "" },
+   {"xbmc.metadata.scraper.library",     ADDON_SCRAPER_LIBRARY,     24083, "" },
    {"xbmc.ui.screensaver",               ADDON_SCREENSAVER,         24008, "DefaultAddonScreensaver.png" },
    {"xbmc.player.musicviz",              ADDON_VIZ,                 24010, "DefaultAddonVisualization.png" },
-   {"visualization-library",             ADDON_VIZ_LIBRARY,             0, "" },
+   {"visualization-library",             ADDON_VIZ_LIBRARY,         24084, "" },
    {"xbmc.python.pluginsource",          ADDON_PLUGIN,              24005, "" },
    {"xbmc.python.script",                ADDON_SCRIPT,              24009, "" },
    {"xbmc.python.weather",               ADDON_SCRIPT_WEATHER,      24027, "DefaultAddonWeather.png" },
    {"xbmc.python.lyrics",                ADDON_SCRIPT_LYRICS,       24013, "DefaultAddonLyrics.png" },
-   {"xbmc.python.library",               ADDON_SCRIPT_LIBRARY,      24014, "" },
-   {"xbmc.python.module",                ADDON_SCRIPT_MODULE,           0, "" },
+   {"xbmc.python.library",               ADDON_SCRIPT_LIBRARY,      24081, "" },
+   {"xbmc.python.module",                ADDON_SCRIPT_MODULE,       24082, "" },
    {"xbmc.subtitle.module",              ADDON_SUBTITLE_MODULE,     24012, "DefaultAddonSubtitles.png" },
    {"xbmc.gui.skin",                     ADDON_SKIN,                  166, "DefaultAddonSkin.png" },
    {"xbmc.gui.webinterface",             ADDON_WEB_INTERFACE,         199, "DefaultAddonWebSkin.png" },
@@ -134,10 +134,12 @@ const CStdString GetIcon(const ADDON::TYPE& type)
       y.clear(); \
   }
 
+#define SS(x) (x) ? x : ""
+
 AddonProps::AddonProps(const cp_extension_t *ext)
   : id(ext->plugin->identifier)
-  , version(ext->plugin->version)
-  , minversion(ext->plugin->abi_bw_compatibility)
+  , version(SS(ext->plugin->version))
+  , minversion(SS(ext->plugin->abi_bw_compatibility))
   , name(ext->plugin->name)
   , path(ext->plugin->plugin_path)
   , author(ext->plugin->provider_name)
@@ -171,8 +173,8 @@ AddonProps::AddonProps(const cp_extension_t *ext)
 
 AddonProps::AddonProps(const cp_plugin_info_t *plugin)
   : id(plugin->identifier)
-  , version(plugin->version)
-  , minversion(plugin->abi_bw_compatibility)
+  , version(SS(plugin->version))
+  , minversion(SS(plugin->abi_bw_compatibility))
   , name(plugin->name)
   , path(plugin->plugin_path)
   , author(plugin->provider_name)
@@ -185,8 +187,8 @@ void AddonProps::Serialize(CVariant &variant) const
 {
   variant["addonid"] = id;
   variant["type"] = TranslateType(type);
-  variant["version"] = version.c_str();
-  variant["minversion"] = minversion.c_str();
+  variant["version"] = version.asString();
+  variant["minversion"] = minversion.asString();
   variant["name"] = name;
   variant["license"] = license;
   variant["summary"] = summary;
@@ -215,7 +217,7 @@ void AddonProps::Serialize(CVariant &variant) const
   {
     CVariant dep(CVariant::VariantTypeObject);
     dep["addonid"] = it->first;
-    dep["version"] = it->second.first.c_str();
+    dep["version"] = it->second.first.asString();
     dep["optional"] = it->second.second;
     variant["dependencies"].push_back(dep);
   }
@@ -240,7 +242,7 @@ void AddonProps::BuildDependencies(const cp_plugin_info_t *plugin)
     return;
   for (unsigned int i = 0; i < plugin->num_imports; ++i)
     dependencies.insert(make_pair(CStdString(plugin->imports[i].plugin_id),
-                        make_pair(AddonVersion(plugin->imports[i].version), plugin->imports[i].optional != 0)));
+                                  make_pair(AddonVersion(SS(plugin->imports[i].version)), plugin->imports[i].optional != 0)));
 }
 
 /**
@@ -603,6 +605,15 @@ const CStdString CAddon::LibPath() const
   return URIUtils::AddFileToFolder(m_props.path, m_strLibName);
 }
 
+AddonVersion CAddon::GetDependencyVersion(const std::string &dependencyID) const
+{
+  const ADDON::ADDONDEPS &deps = GetDeps();
+  ADDONDEPS::const_iterator it = deps.find(dependencyID);
+  if (it != deps.end())
+    return it->second.first;
+  return AddonVersion("0.0.0");
+}
+
 /**
  * CAddonLibrary
  *
@@ -632,26 +643,6 @@ TYPE CAddonLibrary::SetAddonType()
   else
     return ADDON_UNKNOWN;
 }
-
-CStdString GetXbmcApiVersionDependency(ADDON::AddonPtr addon)
-{
-  CStdString version("1.0");
-  if (addon.get() != NULL)
-  {
-    const ADDON::ADDONDEPS &deps = addon->GetDeps();
-    ADDON::ADDONDEPS::const_iterator it;
-    CStdString key("xbmc.python");
-    it = deps.find(key);
-    if (!(it == deps.end()))
-    {
-      const ADDON::AddonVersion * xbmcApiVersion = &(it->second.first);
-      version = xbmcApiVersion->c_str();
-    }
-  }
-
-  return version;
-}
-
 
 } /* namespace ADDON */
 
