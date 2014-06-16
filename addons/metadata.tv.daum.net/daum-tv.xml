@@ -38,11 +38,11 @@
 				<RegExp conditional="RemoveSeasonFromTitle" input="$$6" output="\1" dest="6">
 					<expression trim="1">^(.*) 시즌 *(\d+) *$</expression>
 				</RegExp>
-				<!-- $$10:english_title for later use -->
-				<RegExp input="$$1" output="\1" dest="10">
-					<expression>"titleEn":"(.*?)"</expression>
-				</RegExp>
 				<expression />
+			</RegExp>
+			<!-- BUG: titleEn is not set for Mobile!!! -->
+			<RegExp input="$$1" output="&lt;originaltitle&gt;\1&lt;/originaltitle&gt;" dest="5+">
+				<expression>"titleEn":"([^"]+)"</expression>
 			</RegExp>
 			<RegExp input="$$1" output="&lt;year&gt;\1&lt;/year&gt;" dest="5+">
 				<expression>"prodYear":(\d*)</expression>
@@ -95,6 +95,9 @@
 				<expression>"fullname":"(.*?)"</expression>
 			</RegExp>
 
+			<RegExp input="$$2" output="&lt;url function=&quot;ParseDaumMoviePage&quot; cache=&quot;daum-movie-\1.html&quot;&gt;http://movie.daum.net/tv/detail/main.do?tvProgramId=\1&lt;/url&gt;" dest="5+">
+				<expression />
+			</RegExp>
 			<RegExp input="$$2" output="&lt;url function=&quot;ParseDaumCast&quot; cache=&quot;daum-tcast-\1.json&quot;&gt;http://m.movie.daum.net/data/movie/tv/cast_crew.json?pageNo=1&amp;pageSize=100&amp;tvProgramId=\1&lt;/url&gt;" dest="5+">
 				<expression />
 			</RegExp>
@@ -366,7 +369,7 @@
 				<expression />
 			</RegExp>
 			<!-- set $$11(season) -->
-			<RegExp input="$$1" output="&lt;url function=&quot;LookupSeasonFromTableById&quot; cache=&quot;daum-tvtbl.json&quot;&gt;https://sites.google.com/site/xbmckorea/table/daumtv_extra.json&lt;/url&gt;" dest="5+">
+			<RegExp input="$INFO[SeasonMapURL]" output="&lt;url function=&quot;LookupSeasonFromTableById&quot; cache=&quot;daum-tvtbl.json&quot;&gt;\1&lt;/url&gt;" dest="5+">
 				<expression />
 			</RegExp>
 			<!-- get list based on $$10 & $$11 -->
@@ -406,6 +409,15 @@
 			<expression />
 		</RegExp>
 	</LookupSeasonFromTableById>
+	<!-- Parse web page for missing info. Refer GetTVDBArtByDaumId -->
+	<ParseDaumMoviePage dest="4">
+		<RegExp input="$$5" output="&lt;details&gt;\1&lt;/details&gt;" dest="4">
+			<RegExp input="$$1" output="&lt;originaltitle&gt;\1&lt;/originaltitle&gt;" dest="5">
+				<expression>span class="eng"&gt;([^&lt;]+)&lt;/span</expression>
+			</RegExp>
+			<expression noclean="1" />
+		</RegExp>
+	</ParseDaumMoviePage>
 	<!-- #############################################
 		function needed for TVDB fanart
 	-->
@@ -493,7 +505,7 @@
 	<!--
 	api: thetvdb.com/api/GetSeries.php?seriesname=<query>
 	web: thetvdb.com/?string=<query>&tab=listseries&function=Search
-	api would be correct choise, but api showed worse result than web (ex: House M.D.)
+	api is a correct solution, but api shows worse result than web (ex: House M.D.)
 	-->
 	<GetTVDBEpisodeListByTitleChain dest="4">
 		<RegExp input="$$5" output="&lt;episodeguide&gt;\1&lt;/episodeguide&gt;" dest="4">
