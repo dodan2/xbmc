@@ -54,10 +54,11 @@ namespace ADDON
     ADDON_AUDIO,
     ADDON_IMAGE,
     ADDON_EXECUTABLE,
-    ADDON_VIZ_LIBRARY, // add noninstallable after this and installable before
+    ADDON_VIZ_LIBRARY,
     ADDON_SCRAPER_LIBRARY,
     ADDON_SCRIPT_LIBRARY,
-    ADDON_SCRIPT_MODULE
+    ADDON_SCRIPT_MODULE,
+    ADDON_MAX
   } TYPE;
 
   class IAddon;
@@ -109,6 +110,7 @@ namespace ADDON
     virtual TiXmlElement* GetSettingsXML() =0;
     virtual CStdString GetString(uint32_t id) =0;
     virtual const ADDONDEPS &GetDeps() const =0;
+    virtual AddonVersion GetDependencyVersion(const std::string &dependencyID) const =0;
     virtual bool MeetsVersion(const AddonVersion &version) const =0;
     virtual bool ReloadSettings() =0;
 
@@ -123,15 +125,5 @@ namespace ADDON
     virtual bool LoadStrings() =0;
     virtual void ClearStrings() =0;
   };
-
-  // some utilitiy methods
-
-  /**
-   * This function will extract the Addon's currently assigned xbmc.python
-   * API version. If addon is NULL, or there is no xbmc.python dependency defined,
-   * then the version is assumed to be "1.0"
-   */
-  CStdString GetXbmcApiVersionDependency(ADDON::AddonPtr addon);
-
 };
 

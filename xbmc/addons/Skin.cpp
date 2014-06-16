@@ -37,20 +37,18 @@
 using namespace std;
 using namespace XFILE;
 
-#define SKIN_MIN_VERSION 2.1f
-
 boost::shared_ptr<ADDON::CSkinInfo> g_SkinInfo;
 
 namespace ADDON
 {
 
 CSkinInfo::CSkinInfo(const AddonProps &props, const RESOLUTION_INFO &resolution)
-  : CAddon(props), m_defaultRes(resolution)
+  : CAddon(props), m_defaultRes(resolution), m_version("")
 {
 }
 
 CSkinInfo::CSkinInfo(const cp_extension_t *ext)
-  : CAddon(ext)
+  : CAddon(ext), m_version("")
 {
   ELEMENTS elements;
   if (CAddonMgr::Get().GetExtElements(ext->configuration, "res", elements))
@@ -62,9 +60,8 @@ CSkinInfo::CSkinInfo(const cp_extension_t *ext)
       bool defRes = CAddonMgr::Get().GetExtValue(*i, "@default").Equals("true");
       CStdString folder = CAddonMgr::Get().GetExtValue(*i, "@folder");
       float aspect = 0;
-      CStdStringArray fracs;
       CStdString strAspect = CAddonMgr::Get().GetExtValue(*i, "@aspect");
-      StringUtils::SplitString(strAspect, ":", fracs);
+      vector<string> fracs = StringUtils::Split(strAspect, ":");
       if (fracs.size() == 2)
         aspect = (float)(atof(fracs[0].c_str())/atof(fracs[1].c_str()));
       if (width > 0 && height > 0)
@@ -95,7 +92,9 @@ CSkinInfo::CSkinInfo(const cp_extension_t *ext)
   m_debugging = !strcmp(str.c_str(), "true");
 
   LoadStartupWindows(ext);
-  m_Version = 2.11;
+
+  // figure out the version
+  m_version = GetDependencyVersion("xbmc.gui");
 }
 
 CSkinInfo::~CSkinInfo()
@@ -180,11 +179,6 @@ CStdString CSkinInfo::GetSkinPath(const CStdString& strFile, RESOLUTION_INFO *re
 bool CSkinInfo::HasSkinFile(const CStdString &strFile) const
 {
   return CFile::Exists(GetSkinPath(strFile));
-}
-
-double CSkinInfo::GetMinVersion()
-{
-  return SKIN_MIN_VERSION;
 }
 
 void CSkinInfo::LoadIncludes()
@@ -279,7 +273,7 @@ const INFO::CSkinVariableString* CSkinInfo::CreateSkinVariable(const CStdString&
   return m_includes.CreateSkinVariable(name, context);
 }
 
-void CSkinInfo::SettingOptionsSkinColorsFiller(const CSetting *setting, std::vector< std::pair<std::string, std::string> > &list, std::string &current)
+void CSkinInfo::SettingOptionsSkinColorsFiller(const CSetting *setting, std::vector< std::pair<std::string, std::string> > &list, std::string &current, void *data)
 {
   CStdString settingValue = ((const CSettingString*)setting)->GetValue();
   // Remove the .xml extension from the Themes
@@ -320,9 +314,9 @@ void CSkinInfo::SettingOptionsSkinColorsFiller(const CSetting *setting, std::vec
   }
 }
 
-void CSkinInfo::SettingOptionsSkinFontsFiller(const CSetting *setting, std::vector< std::pair<std::string, std::string> > &list, std::string &current)
+void CSkinInfo::SettingOptionsSkinFontsFiller(const CSetting *setting, std::vector< std::pair<std::string, std::string> > &list, std::string &current, void *data)
 {
-  CStdString settingValue = ((const CSettingString*)setting)->GetValue();
+  std::string settingValue = ((const CSettingString*)setting)->GetValue();
   bool currentValueSet = false;
   std::string strPath = g_SkinInfo->GetSkinPath("Font.xml");
 
@@ -333,52 +327,33 @@ void CSkinInfo::SettingOptionsSkinFontsFiller(const CSetting *setting, std::vect
     return;
   }
 
-  TiXmlElement* pRootElement = xmlDoc.RootElement();
-
-  std::string strValue = pRootElement->ValueStr();
-  if (strValue != "fonts")
+  const TiXmlElement* pRootElement = xmlDoc.RootElement();
+  if (!pRootElement || pRootElement->ValueStr() != "fonts")
   {
     CLog::Log(LOGERROR, "FillInSkinFonts: file %s doesn't start with <fonts>", strPath.c_str());
     return;
   }
 
-  const TiXmlNode *pChild = pRootElement->FirstChild();
-  strValue = pChild->ValueStr();
-  if (strValue == "fontset")
+  const TiXmlElement *pChild = pRootElement->FirstChildElement("fontset");
+  while (pChild)
   {
-    while (pChild)
+    const char* idAttr = pChild->Attribute("id");
+    const char* idLocAttr = pChild->Attribute("idloc");
+    if (idAttr != NULL)
     {
-      strValue = pChild->ValueStr();
-      if (strValue == "fontset")
-      {
-        const char* idAttr = ((TiXmlElement*) pChild)->Attribute("id");
-        const char* idLocAttr = ((TiXmlElement*) pChild)->Attribute("idloc");
-        const char* unicodeAttr = ((TiXmlElement*) pChild)->Attribute("unicode");
+      if (idLocAttr)
+        list.push_back(make_pair(g_localizeStrings.Get(atoi(idLocAttr)), idAttr));
+      else
+        list.push_back(make_pair(idAttr, idAttr));
 
-        bool isUnicode = (unicodeAttr && stricmp(unicodeAttr, "true") == 0);
-
-        bool isAllowed = true;
-        if (g_langInfo.ForceUnicodeFont() && !isUnicode)
-          isAllowed = false;
-
-        if (idAttr != NULL && isAllowed)
-        {
-          if (idLocAttr)
-            list.push_back(make_pair(g_localizeStrings.Get(atoi(idLocAttr)), idAttr));
-          else
-            list.push_back(make_pair(idAttr, idAttr));
-
-          if (StringUtils::EqualsNoCase(idAttr, settingValue.c_str()))
-            currentValueSet = true;
-        }
-      }
-
-      pChild = pChild->NextSibling();
+      if (StringUtils::EqualsNoCase(idAttr, settingValue))
+        currentValueSet = true;
     }
+    pChild = pChild->NextSiblingElement("fontset");
   }
-  else
-  {
-    // Since no fontset is defined, there is no selection of a fontset, so disable the component
+
+  if (list.empty())
+  { // Since no fontset is defined, there is no selection of a fontset, so disable the component
     list.push_back(make_pair(g_localizeStrings.Get(13278), ""));
     current = "";
     currentValueSet = true;
@@ -388,7 +363,7 @@ void CSkinInfo::SettingOptionsSkinFontsFiller(const CSetting *setting, std::vect
     current = list[0].second;
 }
 
-void CSkinInfo::SettingOptionsSkinSoundFiller(const CSetting *setting, std::vector< std::pair<std::string, std::string> > &list, std::string &current)
+void CSkinInfo::SettingOptionsSkinSoundFiller(const CSetting *setting, std::vector< std::pair<std::string, std::string> > &list, std::string &current, void *data)
 {
   CStdString settingValue = ((const CSettingString*)setting)->GetValue();
   current = "SKINDEFAULT";
@@ -428,7 +403,7 @@ void CSkinInfo::SettingOptionsSkinSoundFiller(const CSetting *setting, std::vect
   }
 }
 
-void CSkinInfo::SettingOptionsSkinThemesFiller(const CSetting *setting, std::vector< std::pair<std::string, std::string> > &list, std::string &current)
+void CSkinInfo::SettingOptionsSkinThemesFiller(const CSetting *setting, std::vector< std::pair<std::string, std::string> > &list, std::string &current, void *data)
 {
   // get the choosen theme and remove the extension from the current theme (backward compat)
   CStdString settingValue = ((const CSettingString*)setting)->GetValue();
@@ -457,7 +432,7 @@ void CSkinInfo::SettingOptionsSkinThemesFiller(const CSetting *setting, std::vec
   }
 }
 
-void CSkinInfo::SettingOptionsStartupWindowsFiller(const CSetting *setting, std::vector< std::pair<std::string, int> > &list, int &current)
+void CSkinInfo::SettingOptionsStartupWindowsFiller(const CSetting *setting, std::vector< std::pair<std::string, int> > &list, int &current, void *data)
 {
   int settingValue = ((const CSettingInt *)setting)->GetValue();
   current = -1;

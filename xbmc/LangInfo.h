@@ -124,7 +124,7 @@ public:
   const CStdString& GetSpeedUnitString() const;
   CLangInfo::SPEED_UNIT GetSpeedUnit() const;
 
-  void GetRegionNames(CStdStringArray& array);
+  void GetRegionNames(std::vector<std::string>& array);
   void SetCurrentRegion(const CStdString& strName);
   const CStdString& GetCurrentRegion() const;
 
@@ -132,9 +132,9 @@ public:
 
   static void LoadTokens(const TiXmlNode* pTokens, std::vector<CStdString>& vecTokens);
 
-  static void SettingOptionsLanguagesFiller(const CSetting *setting, std::vector< std::pair<std::string, std::string> > &list, std::string &current);
-  static void SettingOptionsStreamLanguagesFiller(const CSetting *setting, std::vector< std::pair<std::string, std::string> > &list, std::string &current);
-  static void SettingOptionsRegionsFiller(const CSetting *setting, std::vector< std::pair<std::string, std::string> > &list, std::string &current);
+  static void SettingOptionsLanguagesFiller(const CSetting *setting, std::vector< std::pair<std::string, std::string> > &list, std::string &current, void *data);
+  static void SettingOptionsStreamLanguagesFiller(const CSetting *setting, std::vector< std::pair<std::string, std::string> > &list, std::string &current, void *data);
+  static void SettingOptionsRegionsFiller(const CSetting *setting, std::vector< std::pair<std::string, std::string> > &list, std::string &current, void *data);
 
 protected:
   void SetDefaults();

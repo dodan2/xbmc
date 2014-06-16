@@ -65,7 +65,7 @@ extern "C" int debug_callback(CURL_HANDLE *handle, curl_infotype info, char *out
   if (info == CURLINFO_DATA_IN || info == CURLINFO_DATA_OUT)
     return 0;
 
-  if ((g_advancedSettings.m_extraLogLevels & LOGCURL) == 0)
+  if (!g_advancedSettings.CanLogComponent(LOGCURL))
     return 0;
 
   CStdString strLine;
@@ -394,7 +394,7 @@ CCurlFile::CCurlFile()
   m_username = "";
   m_password = "";
   m_httpauth = "";
-  m_cipherlist = "DEFAULT";
+  m_cipherlist = "";
   m_proxytype = PROXY_HTTP;
   m_state = new CReadState();
   m_oldState = NULL;
@@ -608,7 +608,8 @@ void CCurlFile::SetCommonOptions(CReadState* state)
     g_curlInterface.easy_setopt(h, CURLOPT_IGNORE_CONTENT_LENGTH, 1);
 
   // Setup allowed TLS/SSL ciphers. New versions of cURL may deprecate things that are still in use.
-  g_curlInterface.easy_setopt(h, CURLOPT_SSL_CIPHER_LIST, m_cipherlist.c_str());
+  if (!m_cipherlist.empty())
+    g_curlInterface.easy_setopt(h, CURLOPT_SSL_CIPHER_LIST, m_cipherlist.c_str());
 }
 
 void CCurlFile::SetRequestHeaders(CReadState* state)
@@ -815,7 +816,8 @@ bool CCurlFile::Get(const CStdString& strURL, CStdString& strHTML)
 
 bool CCurlFile::Service(const CStdString& strURL, CStdString& strHTML)
 {
-  if (Open(strURL))
+  const CURL pathToUrl(strURL);
+  if (Open(pathToUrl))
   {
     if (ReadData(strHTML))
     {
@@ -874,8 +876,8 @@ bool CCurlFile::Download(const CStdString& strURL, const CStdString& strFileName
 // Detect whether we are "online" or not! Very simple and dirty!
 bool CCurlFile::IsInternet()
 {
-  CStdString strURL = "http://www.google.com";
-  bool found = Exists(strURL);
+  CURL url("http://www.google.com");
+  bool found = Exists(url);
   Close();
 
   return found;

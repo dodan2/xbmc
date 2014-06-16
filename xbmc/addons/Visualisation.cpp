@@ -22,6 +22,8 @@
 #include "utils/fft.h"
 #include "GUIInfoManager.h"
 #include "Application.h"
+#include "guilib/GraphicContext.h"
+#include "guilib/WindowIDs.h"
 #include "music/tags/MusicInfoTag.h"
 #include "settings/Settings.h"
 #include "settings/AdvancedSettings.h"
@@ -31,7 +33,6 @@
 #include "utils/StringUtils.h"
 #include "cores/IPlayer.h"
 #include "cores/AudioEngine/AEFactory.h"
-#include "cores/AudioEngine/Utils/AEConvert.h"
 #ifdef TARGET_POSIX
 #include <dlfcn.h>
 #include "filesystem/SpecialProtocol.h"

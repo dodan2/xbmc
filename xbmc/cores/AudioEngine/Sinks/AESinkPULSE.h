@@ -39,9 +39,10 @@ public:
   virtual bool Initialize(AEAudioFormat &format, std::string &device);
   virtual void Deinitialize();
 
-  virtual double       GetDelay        ();
+  virtual double       GetDelay        () { return 0.0; }
+  virtual void         GetDelay        (AEDelayStatus& status);
   virtual double       GetCacheTotal   ();
-  virtual unsigned int AddPackets      (uint8_t *data, unsigned int frames, bool hasAudio, bool blocking = false);
+  virtual unsigned int AddPackets      (uint8_t **data, unsigned int frames, unsigned int offset);
   virtual void         Drain           ();
 
   virtual bool HasVolume() { return true; };
@@ -51,12 +52,13 @@ public:
   bool IsInitialized();
   CCriticalSection m_sec;
 private:
-  bool Pause(bool pause);
+  void Pause(bool pause);
   static inline bool WaitForOperation(pa_operation *op, pa_threaded_mainloop *mainloop, const char *LogEntry);
   static bool SetupContext(const char *host, pa_context **context, pa_threaded_mainloop **mainloop);
 
   bool m_IsAllocated;
   bool m_passthrough;
+  bool m_IsStreamPaused;
 
   AEAudioFormat m_format;
   unsigned int m_BytesPerSecond;

@@ -398,8 +398,7 @@ bool CGUIDialogAddonSettings::ShowVirtualKeyboard(int iControl)
             bool bUseFileDirectories = false;
             if (option)
             {
-              vector<CStdString> options;
-              StringUtils::SplitString(option, "|", options);
+              vector<string> options = StringUtils::Split(option, "|");
               bUseThumbs = find(options.begin(), options.end(), "usethumbs") != options.end();
               bUseFileDirectories = find(options.begin(), options.end(), "treatasfolder") != options.end();
             }
@@ -455,13 +454,12 @@ bool CGUIDialogAddonSettings::ShowVirtualKeyboard(int iControl)
           const char *strType = setting->Attribute("addontype");
           if (strType)
           {
-            CStdStringArray addonTypes;
-            StringUtils::SplitString(strType, ",", addonTypes);
+            vector<string> addonTypes = StringUtils::Split(strType, ",");
             vector<ADDON::TYPE> types;
-            for (unsigned int i = 0 ; i < addonTypes.size() ; i++)
+            for (vector<string>::iterator i = addonTypes.begin(); i != addonTypes.end(); ++i)
             {
-              StringUtils::Trim(addonTypes[i]);
-              ADDON::TYPE type = TranslateType(addonTypes[i]);
+              StringUtils::Trim(*i);
+              ADDON::TYPE type = TranslateType(*i);
               if (type != ADDON_UNKNOWN)
                 types.push_back(type);
             }
@@ -472,11 +470,10 @@ bool CGUIDialogAddonSettings::ShowVirtualKeyboard(int iControl)
               if (multiSelect)
               {
                 // construct vector of addon IDs (IDs are comma seperated in single string)
-                CStdStringArray addonIDs;
-                StringUtils::SplitString(value, ",", addonIDs);
+                vector<string> addonIDs = StringUtils::Split(value, ",");
                 if (CGUIWindowAddonBrowser::SelectAddonID(types, addonIDs, false) == 1)
                 {
-                  StringUtils::JoinString(addonIDs, ",", value);
+                  value = StringUtils::Join(addonIDs, ",");
                   ((CGUIButtonControl*) control)->SetLabel2(GetAddonNames(value));
                 }
               }
@@ -558,7 +555,7 @@ void CGUIDialogAddonSettings::SaveSettings(void)
 
 void CGUIDialogAddonSettings::FreeSections()
 {
-  CGUIControlGroupList *group = (CGUIControlGroupList *)GetControl(CONTROL_SECTION_AREA);
+  CGUIControlGroupList *group = dynamic_cast<CGUIControlGroupList *>(GetControl(CONTROL_SECTION_AREA));
   if (group)
   {
     group->FreeResources();
@@ -572,7 +569,7 @@ void CGUIDialogAddonSettings::FreeSections()
 void CGUIDialogAddonSettings::FreeControls()
 {
   // clear the category group
-  CGUIControlGroupList *control = (CGUIControlGroupList *)GetControl(CONTROL_SETTINGS_AREA);
+  CGUIControlGroupList *control = dynamic_cast<CGUIControlGroupList *>(GetControl(CONTROL_SETTINGS_AREA));
   if (control)
   {
     control->FreeResources();
@@ -582,8 +579,8 @@ void CGUIDialogAddonSettings::FreeControls()
 
 void CGUIDialogAddonSettings::CreateSections()
 {
-  CGUIControlGroupList *group = (CGUIControlGroupList *)GetControl(CONTROL_SECTION_AREA);
-  CGUIButtonControl *originalButton = (CGUIButtonControl *)GetControl(CONTROL_DEFAULT_SECTION_BUTTON);
+  CGUIControlGroupList *group = dynamic_cast<CGUIControlGroupList *>(GetControl(CONTROL_SECTION_AREA));
+  CGUIButtonControl *originalButton = dynamic_cast<CGUIButtonControl *>(GetControl(CONTROL_DEFAULT_SECTION_BUTTON));
   if (!m_addon)
     return;
 
@@ -634,12 +631,12 @@ void CGUIDialogAddonSettings::CreateControls()
 {
   FreeControls();
 
-  CGUISpinControlEx *pOriginalSpin = (CGUISpinControlEx*)GetControl(CONTROL_DEFAULT_SPIN);
-  CGUIRadioButtonControl *pOriginalRadioButton = (CGUIRadioButtonControl *)GetControl(CONTROL_DEFAULT_RADIOBUTTON);
-  CGUIButtonControl *pOriginalButton = (CGUIButtonControl *)GetControl(CONTROL_DEFAULT_BUTTON);
-  CGUIImage *pOriginalImage = (CGUIImage *)GetControl(CONTROL_DEFAULT_SEPARATOR);
-  CGUILabelControl *pOriginalLabel = (CGUILabelControl *)GetControl(CONTROL_DEFAULT_LABEL_SEPARATOR);
-  CGUISettingsSliderControl *pOriginalSlider = (CGUISettingsSliderControl *)GetControl(CONTROL_DEFAULT_SLIDER);
+  CGUISpinControlEx *pOriginalSpin = dynamic_cast<CGUISpinControlEx*>(GetControl(CONTROL_DEFAULT_SPIN));
+  CGUIRadioButtonControl *pOriginalRadioButton = dynamic_cast<CGUIRadioButtonControl *>(GetControl(CONTROL_DEFAULT_RADIOBUTTON));
+  CGUIButtonControl *pOriginalButton = dynamic_cast<CGUIButtonControl *>(GetControl(CONTROL_DEFAULT_BUTTON));
+  CGUIImage *pOriginalImage = dynamic_cast<CGUIImage *>(GetControl(CONTROL_DEFAULT_SEPARATOR));
+  CGUILabelControl *pOriginalLabel = dynamic_cast<CGUILabelControl *>(GetControl(CONTROL_DEFAULT_LABEL_SEPARATOR));
+  CGUISettingsSliderControl *pOriginalSlider = dynamic_cast<CGUISettingsSliderControl *>(GetControl(CONTROL_DEFAULT_SLIDER));
 
   if (!m_addon || !pOriginalSpin || !pOriginalRadioButton || !pOriginalButton || !pOriginalImage
                || !pOriginalLabel || !pOriginalSlider)
@@ -652,8 +649,7 @@ void CGUIDialogAddonSettings::CreateControls()
   pOriginalLabel->SetVisible(false);
   pOriginalSlider->SetVisible(false);
 
-  // clear the category group
-  CGUIControlGroupList *group = (CGUIControlGroupList *)GetControl(CONTROL_SETTINGS_AREA);
+  CGUIControlGroupList *group = dynamic_cast<CGUIControlGroupList *>(GetControl(CONTROL_SETTINGS_AREA));
   if (!group)
     return;
 
@@ -855,18 +851,17 @@ void CGUIDialogAddonSettings::CreateControls()
         float fMin = 0.0f;
         float fMax = 100.0f;
         float fInc = 1.0f;
-        vector<CStdString> range;
-        StringUtils::SplitString(setting->Attribute("range"), ",", range);
+        vector<std::string> range = StringUtils::Split(setting->Attribute("range"), ",");
         if (range.size() > 1)
         {
-          fMin = (float)atof(range[0]);
+          fMin = (float)atof(range[0].c_str());
           if (range.size() > 2)
           {
-            fMax = (float)atof(range[2]);
-            fInc = (float)atof(range[1]);
+            fMax = (float)atof(range[2].c_str());
+            fInc = (float)atof(range[1].c_str());
           }
           else
-            fMax = (float)atof(range[1]);
+            fMax = (float)atof(range[1].c_str());
         }
 
         CStdString option = setting->Attribute("option");
@@ -918,9 +913,8 @@ void CGUIDialogAddonSettings::CreateControls()
 CStdString CGUIDialogAddonSettings::GetAddonNames(const CStdString& addonIDslist) const
 {
   CStdString retVal;
-  CStdStringArray addons;
-  StringUtils::SplitString(addonIDslist, ",", addons);
-  for (CStdStringArray::const_iterator it = addons.begin(); it != addons.end() ; it ++)
+  vector<string> addons = StringUtils::Split(addonIDslist, ",");
+  for (vector<string>::const_iterator it = addons.begin(); it != addons.end() ; it ++)
   {
     if (!retVal.empty())
       retVal += ", ";

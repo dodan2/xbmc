@@ -87,11 +87,16 @@ public:
   static bool EndsWithNoCase(const std::string &str1, const std::string &str2);
   static bool EndsWithNoCase(const std::string &str1, const char *s2);
 
-  static void JoinString(const CStdStringArray &strings, const CStdString& delimiter, CStdString& result);
-  static CStdString JoinString(const CStdStringArray &strings, const CStdString& delimiter);
   static CStdString Join(const std::vector<std::string> &strings, const CStdString& delimiter);
-  static int SplitString(const CStdString& input, const CStdString& delimiter, CStdStringArray &results, unsigned int iMaxStrings = 0);
-  static CStdStringArray SplitString(const CStdString& input, const CStdString& delimiter, unsigned int iMaxStrings = 0);
+  /*! \brief Splits the given input string using the given delimiter into separate strings.
+
+   If the given input string is empty the result will be an empty array (not
+   an array containing an empty string).
+
+   \param input Input string to be split
+   \param delimiter Delimiter to be used to split the input string
+   \param iMaxStrings (optional) Maximum number of splitted strings
+   */
   static std::vector<std::string> Split(const std::string& input, const std::string& delimiter, unsigned int iMaxStrings = 0);
   static int FindNumber(const CStdString& strInput, const CStdString &strFind);
   static int64_t AlphaNumericCompare(const wchar_t *left, const wchar_t *right);
@@ -161,8 +166,8 @@ public:
   static CStdString CreateUUID();
   static bool ValidateUUID(const CStdString &uuid); // NB only validates syntax
   static double CompareFuzzy(const CStdString &left, const CStdString &right);
-  static int FindBestMatch(const CStdString &str, const CStdStringArray &strings, double &matchscore);
-  static bool ContainsKeyword(const CStdString &str, const CStdStringArray &keywords);
+  static int FindBestMatch(const CStdString &str, const std::vector<std::string> &strings, double &matchscore);
+  static bool ContainsKeyword(const CStdString &str, const std::vector<std::string> &keywords);
 
   /*! \brief Escapes the given string to be able to be used as a parameter.
 
@@ -173,6 +178,15 @@ public:
    \return Escaped/Paramified string
    */
   static std::string Paramify(const std::string &param);
+
+  /*! \brief Split a string by the specified delimiters.
+   Splits a string using one or more delimiting characters, ignoring empty tokens.
+   Differs from Split() in two ways:
+    1. The delimiters are treated as individual characters, rather than a single delimiting string.
+    2. Empty tokens are ignored.
+   \return a vector of tokens
+   */
+  static std::vector<std::string> Tokenize(const std::string& input, const std::string& delimiters);
   static void Tokenize(const std::string& input, std::vector<std::string>& tokens, const std::string& delimiters);
 private:
   static CStdString m_lastUUID;

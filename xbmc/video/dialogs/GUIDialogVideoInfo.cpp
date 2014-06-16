@@ -263,7 +263,7 @@ void CGUIDialogVideoInfo::SetMovie(const CFileItem *item)
     for (std::vector<std::string>::const_iterator it = artists.begin(); it != artists.end(); ++it)
     {
       int idArtist = database.GetArtistByName(*it);
-      CStdString thumb = database.GetArtForItem(idArtist, "artist", "thumb");
+      CStdString thumb = database.GetArtForItem(idArtist, MediaTypeArtist, "thumb");
       CFileItemPtr item(new CFileItem(*it));
       if (!thumb.empty())
         item->SetArt("thumb", thumb);
@@ -333,7 +333,7 @@ void CGUIDialogVideoInfo::SetMovie(const CFileItem *item)
             seasonID = db.GetSeasonId(m_movieItem->GetVideoInfoTag()->m_iIdShow,
                                       m_movieItem->GetVideoInfoTag()->m_iSeason);
           CGUIListItem::ArtMap thumbs;
-          if (db.GetArtForItem(seasonID, "season", thumbs))
+          if (db.GetArtForItem(seasonID, MediaTypeSeason, thumbs))
           {
             for (CGUIListItem::ArtMap::iterator i = thumbs.begin(); i != thumbs.end(); i++)
               m_movieItem->SetArt("season." + i->first, i->second);
@@ -704,7 +704,7 @@ void CGUIDialogVideoInfo::OnGetArt()
 
     // Grab the thumbnails from the web
     vector<CStdString> thumbs;
-    int season = (m_movieItem->GetVideoInfoTag()->m_type == "season") ? m_movieItem->GetVideoInfoTag()->m_iSeason : -1;
+    int season = (m_movieItem->GetVideoInfoTag()->m_type == MediaTypeSeason) ? m_movieItem->GetVideoInfoTag()->m_iSeason : -1;
     m_movieItem->GetVideoInfoTag()->m_strPictureURL.GetThumbURLs(thumbs, type, season);
 
     for (unsigned int i = 0; i < thumbs.size(); ++i)
@@ -957,12 +957,12 @@ int CGUIDialogVideoInfo::ManageVideoItem(const CFileItemPtr &item)
   int dbId = item->GetVideoInfoTag()->m_iDbId;
 
   CContextButtons buttons;
-  if (type == "movie" || type == "set" ||
-      type == "tvshow" || type == "episode" ||
-      type == "musicvideo")
+  if (type == MediaTypeMovie || type == MediaTypeVideoCollection ||
+      type == MediaTypeTvShow || type == MediaTypeEpisode ||
+      type == MediaTypeMusicVideo)
     buttons.Add(CONTEXT_BUTTON_EDIT, 16105);
 
-  if (type == "movie" || type == "tvshow")
+  if (type == MediaTypeMovie || type == MediaTypeTvShow)
     buttons.Add(CONTEXT_BUTTON_EDIT_SORTTITLE, 16107);
 
   if (item->m_bIsFolder)
@@ -979,7 +979,7 @@ int CGUIDialogVideoInfo::ManageVideoItem(const CFileItemPtr &item)
       buttons.Add(CONTEXT_BUTTON_MARK_WATCHED, 16103);   //Mark as Watched
   }
 
-  if (type == "movie")
+  if (type == MediaTypeMovie)
   {
     // only show link/unlink if there are tvshows available
     if (database.HasContent(VIDEODB_CONTENT_TVSHOWS))
@@ -993,12 +993,12 @@ int CGUIDialogVideoInfo::ManageVideoItem(const CFileItemPtr &item)
     buttons.Add(CONTEXT_BUTTON_SET_MOVIESET, 20465);
   }
 
-  if (type == "episode" &&
+  if (type == MediaTypeEpisode &&
       item->GetVideoInfoTag()->m_iBookmarkId > 0)
     buttons.Add(CONTEXT_BUTTON_UNLINK_BOOKMARK, 20405);
 
   // movie sets
-  if (item->m_bIsFolder && type == "set")
+  if (item->m_bIsFolder && type == MediaTypeVideoCollection)
   {
     buttons.Add(CONTEXT_BUTTON_SET_MOVIESET_ART, 13511);
     buttons.Add(CONTEXT_BUTTON_MOVIESET_ADD_REMOVE_ITEMS, 20465);
@@ -1067,7 +1067,7 @@ int CGUIDialogVideoInfo::ManageVideoItem(const CFileItemPtr &item)
         break;
 
       case CONTEXT_BUTTON_SET_MOVIESET_ART:
-        result = ManageVideoItemArtwork(item, "set");
+        result = ManageVideoItemArtwork(item, MediaTypeVideoCollection);
         break;
 
       case CONTEXT_BUTTON_MOVIESET_ADD_REMOVE_ITEMS:
@@ -1202,6 +1202,7 @@ bool CGUIDialogVideoInfo::CanDeleteVideoItem(const CFileItemPtr &item)
   return params.GetMovieId()   != -1 ||
          params.GetEpisodeId() != -1 ||
          params.GetMVideoId()  != -1 ||
+         params.GetSetId()     != -1 ||
          (params.GetTvShowId() != -1 && params.GetSeason() <= -1 &&
           !CVideoDatabaseDirectory::IsAllItem(item->GetPath()));
 }
@@ -1239,6 +1240,9 @@ bool CGUIDialogVideoInfo::DeleteVideoItemFromDatabase(const CFileItemPtr &item, 
     case VIDEODB_CONTENT_MUSICVIDEOS:
       heading = 20392;
       break;
+    case VIDEODB_CONTENT_MOVIE_SETS:
+      heading = 646;
+      break;
 
     default:
       return false;
@@ -1262,10 +1266,16 @@ bool CGUIDialogVideoInfo::DeleteVideoItemFromDatabase(const CFileItemPtr &item, 
   if (!pDialog->IsConfirmed())
     return false;
 
-  CStdString path;
   CVideoDatabase database;
   database.Open();
 
+  if (type == VIDEODB_CONTENT_MOVIE_SETS)
+  {
+    database.DeleteSet(item->GetVideoInfoTag()->m_iDbId);
+    return true;
+  }
+
+  CStdString path;
   database.GetFilePathById(item->GetVideoInfoTag()->m_iDbId, path, type);
   if (path.empty())
     return false;
@@ -1505,10 +1515,10 @@ bool CGUIDialogVideoInfo::GetSetForMovie(const CFileItem *movieItem, CFileItemPt
       return false;
     int idSet = videodb.AddSet(newSetTitle);
     map<string, string> movieArt, setArt;
-    if (!videodb.GetArtForItem(idSet, "set", setArt))
+    if (!videodb.GetArtForItem(idSet, MediaTypeVideoCollection, setArt))
     {
-      videodb.GetArtForItem(movieItem->GetVideoInfoTag()->m_iDbId, "movie", movieArt);
-      videodb.SetArtForItem(idSet, "set", movieArt);
+      videodb.GetArtForItem(movieItem->GetVideoInfoTag()->m_iDbId, MediaTypeMovie, movieArt);
+      videodb.SetArtForItem(idSet, MediaTypeVideoCollection, movieArt);
     }
     CFileItemPtr newSet(new CFileItem(newSetTitle));
     newSet->GetVideoInfoTag()->m_iDbId = idSet;
@@ -1547,19 +1557,19 @@ bool CGUIDialogVideoInfo::GetItemsForTag(const CStdString &strHeading, const std
   MediaType mediaType = MediaTypeNone;
   std::string baseDir = "videodb://";
   std::string idColumn;
-  if (type.compare("movie") == 0)
+  if (type.compare(MediaTypeMovie) == 0)
   {
     mediaType = MediaTypeMovie;
     baseDir += "movies";
     idColumn = "idMovie";
   }
-  else if (type.compare("tvshow") == 0)
+  else if (type.compare(MediaTypeTvShow) == 0)
   {
     mediaType = MediaTypeTvShow;
     baseDir += "tvshows";
     idColumn = "idShow";
   }
-  else if (type.compare("musicvideo") == 0)
+  else if (type.compare(MediaTypeMusicVideo) == 0)
   {
     mediaType = MediaTypeMusicVideo;
     baseDir += "musicvideos";
@@ -1667,7 +1677,7 @@ bool CGUIDialogVideoInfo::RemoveItemsFromTag(const CFileItemPtr &tagItem)
   return true;
 }
 
-bool CGUIDialogVideoInfo::ManageVideoItemArtwork(const CFileItemPtr &item, const std::string &type)
+bool CGUIDialogVideoInfo::ManageVideoItemArtwork(const CFileItemPtr &item, const MediaType &type)
 {
   if (item == NULL || !item->HasVideoInfoTag() || type.empty())
     return false;
@@ -1683,7 +1693,7 @@ bool CGUIDialogVideoInfo::ManageVideoItemArtwork(const CFileItemPtr &item, const
   int idArtist = -1;
   CStdString artistPath;
   string artType = "thumb";
-  if (type == "artist")
+  if (type == MediaTypeArtist)
   {
     CMusicDatabase musicdb;
     if (musicdb.Open())
@@ -1691,7 +1701,7 @@ bool CGUIDialogVideoInfo::ManageVideoItemArtwork(const CFileItemPtr &item, const
       idArtist = musicdb.GetArtistByName(item->GetLabel());
       if (idArtist >= 0 && musicdb.GetArtistPath(idArtist, artistPath))
       {
-        currentThumb = musicdb.GetArtForItem(idArtist, "artist", "thumb");
+        currentThumb = musicdb.GetArtForItem(idArtist, MediaTypeArtist, "thumb");
         if (currentThumb.empty())
           currentThumb = videodb.GetArtForItem(item->GetVideoInfoTag()->m_iDbId, item->GetVideoInfoTag()->m_type, artType);
       }
@@ -1727,15 +1737,33 @@ bool CGUIDialogVideoInfo::ManageVideoItemArtwork(const CFileItemPtr &item, const
 
   bool local = false;
   vector<CStdString> thumbs;
-  if (type != "artist")
+  if (type != MediaTypeArtist)
   {
     CVideoInfoTag tag;
-    if (type == "season")
+    if (type == MediaTypeSeason)
+    {
       videodb.GetTvShowInfo("", tag, item->GetVideoInfoTag()->m_iIdShow);
+      tag.m_strPictureURL.GetThumbURLs(thumbs, artType, item->GetVideoInfoTag()->m_iSeason);
+    }
+    else if (type == MediaTypeVideoCollection)
+    {
+      CFileItemList items;
+      CStdString baseDir = StringUtils::Format("videodb://movies/sets/%d", item->GetVideoInfoTag()->m_iDbId);
+      if (videodb.GetMoviesNav(baseDir, items))
+      {
+        for (int i=0; i < items.Size(); i++)
+        {
+          CVideoInfoTag* pTag = items[i]->GetVideoInfoTag();
+          pTag->m_strPictureURL.Parse();
+          pTag->m_strPictureURL.GetThumbURLs(thumbs, artType);
+        }
+      }
+    }
     else
+    {
       tag = *item->GetVideoInfoTag();
-
-    tag.m_strPictureURL.GetThumbURLs(thumbs, artType, type == "season" ? item->GetVideoInfoTag()->m_iSeason : -1);
+      tag.m_strPictureURL.GetThumbURLs(thumbs, artType);
+    }
 
     for (size_t i = 0; i < thumbs.size(); i++)
     {
@@ -1765,7 +1793,7 @@ bool CGUIDialogVideoInfo::ManageVideoItemArtwork(const CFileItemPtr &item, const
         noneitem->SetIconImage("DefaultActor.png");
     }
 
-    if (type == "set")
+    if (type == MediaTypeVideoCollection)
       noneitem->SetIconImage("DefaultVideo.png");
   }
   else
@@ -1807,16 +1835,16 @@ bool CGUIDialogVideoInfo::ManageVideoItemArtwork(const CFileItemPtr &item, const
   }
 
   // write the selected artwork to the database
-  if (type == "set" ||
+  if (type == MediaTypeVideoCollection ||
       type == "actor" ||
-      type == "season" ||
-      (type == "artist" && idArtist < 0))
+      type == MediaTypeSeason ||
+      (type == MediaTypeArtist && idArtist < 0))
     videodb.SetArtForItem(item->GetVideoInfoTag()->m_iDbId, item->GetVideoInfoTag()->m_type, artType, result);
   else
   {
     CMusicDatabase musicdb;
     if (musicdb.Open())
-      musicdb.SetArtForItem(idArtist, "artist", artType, result);
+      musicdb.SetArtForItem(idArtist, MediaTypeArtist, artType, result);
   }
 
   CUtil::DeleteVideoDatabaseDirectoryCache();
@@ -1828,13 +1856,13 @@ bool CGUIDialogVideoInfo::ManageVideoItemArtwork(const CFileItemPtr &item, const
 
 std::string CGUIDialogVideoInfo::GetLocalizedVideoType(const std::string &strType)
 {
-  if (strType == "movie" || strType == "movies")
+  if (MediaTypes::IsMediaType(strType, MediaTypeMovie))
     return g_localizeStrings.Get(20342);
-  else if (strType == "tvshow" || strType == "tvshows")
+  else if (MediaTypes::IsMediaType(strType, MediaTypeTvShow))
     return g_localizeStrings.Get(20343);
-  else if (strType == "episode" || strType == "episodes")
+  else if (MediaTypes::IsMediaType(strType, MediaTypeEpisode))
     return g_localizeStrings.Get(20359);
-  else if (strType == "musicvideo" || strType == "musicvideos")
+  else if (MediaTypes::IsMediaType(strType, MediaTypeMusicVideo))
     return g_localizeStrings.Get(20391);
 
   return "";
@@ -1958,6 +1986,35 @@ bool CGUIDialogVideoInfo::OnGetFanart(const CFileItemPtr &videoItem)
     items.Add(itemCurrent);
   }
 
+  vector<CStdString> thumbs;
+  if (videoItem->GetVideoInfoTag()->m_type == MediaTypeVideoCollection)
+  {
+    CFileItemList movies;
+    CStdString baseDir = StringUtils::Format("videodb://movies/sets/%d", videoItem->GetVideoInfoTag()->m_iDbId);
+    if (videodb.GetMoviesNav(baseDir, movies))
+    {
+      for (int i=0; i < movies.Size(); i++)
+      {
+        // ensure the fanart is unpacked
+        movies[i]->GetVideoInfoTag()->m_fanart.Unpack();
+
+        // Grab the thumbnails from the web
+        for (unsigned int j = 0; j < movies[i]->GetVideoInfoTag()->m_fanart.GetNumFanarts(); j++)
+        {
+          CStdString strItemPath = StringUtils::Format("fanart://Remote%i",j);
+          CFileItemPtr item(new CFileItem(strItemPath, false));
+          CStdString thumb = movies[i]->GetVideoInfoTag()->m_fanart.GetPreviewURL(j);
+          item->SetArt("thumb", CTextureUtils::GetWrappedThumbURL(thumb));
+          item->SetIconImage("DefaultPicture.png");
+          item->SetLabel(g_localizeStrings.Get(20441));
+          thumbs.push_back(movies[i]->GetVideoInfoTag()->m_fanart.GetImageURL(j));
+
+          items.Add(item);
+        }
+      }
+    }
+  }
+
   // add the none option
   {
     CFileItemPtr itemNone(new CFileItem("fanart://None", false));
@@ -1975,7 +2032,12 @@ bool CGUIDialogVideoInfo::OnGetFanart(const CFileItemPtr &videoItem)
       StringUtils::EqualsNoCase(result, "fanart://Current"))
     return false;
 
-  if (StringUtils::EqualsNoCase(result, "fanart://None") || !CFile::Exists(result))
+  if (StringUtils::StartsWith(result, "fanart://Remote"))
+  {
+    int iFanart = atoi(result.substr(15).c_str());
+    result = thumbs[iFanart];
+  }
+  else if (result.Equals("fanart://None") || !CFile::Exists(result))
     result.clear();
   if (!result.empty() && flip)
     result = CTextureUtils::GetWrappedImageURL(result, "", "flipped");

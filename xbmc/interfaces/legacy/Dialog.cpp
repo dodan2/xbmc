@@ -160,7 +160,7 @@ namespace XBMCAddon
       if (!shares) 
         throw WindowException("Error: GetSources given %s is NULL.",s_shares.c_str());
 
-      if (useFileDirectories && (!maskparam.empty() && !maskparam.size() == 0))
+      if (useFileDirectories && !maskparam.empty())
         mask += "|.rar|.zip";
 
       value = defaultt;
@@ -179,25 +179,20 @@ namespace XBMCAddon
     {
       DelayedCallGuard dcguard(languageHook);
       VECSOURCES *shares = CMediaSourceSettings::Get().GetSources(s_shares);
-      CStdStringArray tmpret;
+      std::vector<String> valuelist;
       String lmask = mask;
       if (!shares) 
         throw WindowException("Error: GetSources given %s is NULL.",s_shares.c_str());
 
-      if (useFileDirectories && (!lmask.empty() && !(lmask.size() == 0)))
+      if (useFileDirectories && !lmask.empty())
         lmask += "|.rar|.zip";
 
       if (type == 1)
-        CGUIDialogFileBrowser::ShowAndGetFileList(*shares, lmask, heading, tmpret, useThumbs, useFileDirectories);
+        CGUIDialogFileBrowser::ShowAndGetFileList(*shares, lmask, heading, valuelist, useThumbs, useFileDirectories);
       else if (type == 2)
-        CGUIDialogFileBrowser::ShowAndGetImageList(*shares, heading, tmpret);
+        CGUIDialogFileBrowser::ShowAndGetImageList(*shares, heading, valuelist);
       else
         throw WindowException("Error: Cannot retreive multuple directories using browse %s is NULL.",s_shares.c_str());
-
-      std::vector<String> valuelist;
-      int index = 0;
-      for (CStdStringArray::iterator iter = tmpret.begin(); iter != tmpret.end(); ++iter)
-        valuelist[index++] = (*iter);
 
       return valuelist;
     }
@@ -287,7 +282,7 @@ namespace XBMCAddon
       {
         case INPUT_ALPHANUM:
           {
-            bool bHiddenInput = option & ALPHANUM_HIDE_INPUT;
+            bool bHiddenInput = (option & ALPHANUM_HIDE_INPUT) == ALPHANUM_HIDE_INPUT;
             if (!CGUIKeyboardFactory::ShowAndGetInput(value, heading, true, bHiddenInput, autoclose))
               value = emptyString;
           }

@@ -474,12 +474,6 @@ void CGUIDialogMediaSource::SetTypeOfMedia(const CStdString &type, bool editNotA
   SET_CONTROL_LABEL(CONTROL_HEADING, format);
 }
 
-void CGUIDialogMediaSource::OnWindowLoaded()
-{
-  CGUIDialog::OnWindowLoaded();
-  ChangeButtonToEdit(CONTROL_NAME, true);  // true for single label
-}
-
 int CGUIDialogMediaSource::GetSelectedItem()
 {
   CGUIMessage message(GUI_MSG_ITEM_SELECTED, GetID(), CONTROL_PATH);
@@ -522,9 +516,9 @@ void CGUIDialogMediaSource::OnPathAdd()
   HighlightItem(m_paths->Size() - 1);
 }
 
-vector<CStdString> CGUIDialogMediaSource::GetPaths()
+vector<string> CGUIDialogMediaSource::GetPaths() const
 {
-  vector<CStdString> paths;
+  vector<string> paths;
   for (int i = 0; i < m_paths->Size(); i++)
   {
     if (!m_paths->Get(i)->GetPath().empty())

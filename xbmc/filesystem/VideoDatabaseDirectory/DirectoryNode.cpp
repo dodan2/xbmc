@@ -69,10 +69,8 @@ CDirectoryNode* CDirectoryNode::ParseURL(const CStdString& strPath)
   CStdString strDirectory=url.GetFileName();
   URIUtils::RemoveSlashAtEnd(strDirectory);
 
-  CStdStringArray Path;
-  StringUtils::SplitString(strDirectory, "/", Path);
-  if (!strDirectory.empty())
-    Path.insert(Path.begin(), "");
+  vector<string> Path = StringUtils::Split(strDirectory, "/");
+  Path.insert(Path.begin(), "");
 
   CDirectoryNode* pNode=NULL;
   CDirectoryNode* pParent=NULL;
@@ -195,7 +193,7 @@ bool CDirectoryNode::GetContent(CFileItemList& items) const
 //  Creates a videodb url
 CStdString CDirectoryNode::BuildPath() const
 {
-  CStdStringArray array;
+  vector<string> array;
 
   if (!m_strName.empty())
     array.insert(array.begin(), m_strName);
@@ -335,7 +333,7 @@ void CDirectoryNode::AddQueuingFolder(CFileItemList& items) const
           pItem->GetVideoInfoTag()->m_iDbId = db.GetSeasonId(pItem->GetVideoInfoTag()->m_iIdShow, -1);
           db.Close();
         }
-        pItem->GetVideoInfoTag()->m_type = "season";
+        pItem->GetVideoInfoTag()->m_type = MediaTypeSeason;
       }
       break;
     default:

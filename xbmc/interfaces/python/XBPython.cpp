@@ -67,13 +67,13 @@ XBPython::XBPython()
   m_vecPlayerCallbackList.clear();
   m_vecMonitorCallbackList.clear();
 
-  CAnnouncementManager::AddAnnouncer(this);
+  CAnnouncementManager::Get().AddAnnouncer(this);
 }
 
 XBPython::~XBPython()
 {
   XBMC_TRACE;
-  CAnnouncementManager::RemoveAnnouncer(this);
+  CAnnouncementManager::Get().RemoveAnnouncer(this);
 }
 
 #define LOCK_AND_COPY(type, dest, src) \
@@ -91,16 +91,16 @@ void XBPython::Announce(AnnouncementFlag flag, const char *sender, const char *m
   if (flag & VideoLibrary)
   {
    if (strcmp(message, "OnScanFinished") == 0)
-     OnDatabaseUpdated("video");
+     OnScanFinished("video");
    else if (strcmp(message, "OnScanStarted") == 0)
-     OnDatabaseScanStarted("video");
+     OnScanStarted("video");
   }
   else if (flag & AudioLibrary)
   {
    if (strcmp(message, "OnScanFinished") == 0)
-     OnDatabaseUpdated("music");
+     OnScanFinished("music");
    else if (strcmp(message, "OnScanStarted") == 0)
-     OnDatabaseScanStarted("music");
+     OnScanStarted("music");
   }
   else if (flag & GUI)
   {
@@ -108,6 +108,10 @@ void XBPython::Announce(AnnouncementFlag flag, const char *sender, const char *m
      OnScreensaverDeactivated();
    else if (strcmp(message, "OnScreensaverActivated") == 0)
      OnScreensaverActivated();
+   else if (strcmp(message, "OnDPMSDeactivated") == 0)
+     OnDPMSDeactivated();
+   else if (strcmp(message, "OnDPMSActivated") == 0)
+     OnDPMSActivated();
   }
 
   OnNotification(sender, std::string(ANNOUNCEMENT::AnnouncementFlagToString(flag)) + "." + std::string(message), CJSONVariantWriter::Write(data, g_advancedSettings.m_jsonOutputCompact));
@@ -302,25 +306,47 @@ void XBPython::OnScreensaverDeactivated()
   }
 }
 
-void XBPython::OnDatabaseUpdated(const std::string &database)
+void XBPython::OnDPMSActivated()
 {
   XBMC_TRACE;
   LOCK_AND_COPY(std::vector<XBMCAddon::xbmc::Monitor*>,tmp,m_vecMonitorCallbackList);
   for (MonitorCallbackList::iterator it = tmp.begin(); (it != tmp.end()); ++it)
   {
     if (CHECK_FOR_ENTRY(m_vecMonitorCallbackList,(*it)))
-      (*it)->OnDatabaseUpdated(database);
+      (*it)->OnDPMSActivated();
   }
 }
 
-void XBPython::OnDatabaseScanStarted(const std::string &database)
+void XBPython::OnDPMSDeactivated()
 {
   XBMC_TRACE;
   LOCK_AND_COPY(std::vector<XBMCAddon::xbmc::Monitor*>,tmp,m_vecMonitorCallbackList);
   for (MonitorCallbackList::iterator it = tmp.begin(); (it != tmp.end()); ++it)
   {
     if (CHECK_FOR_ENTRY(m_vecMonitorCallbackList,(*it)))
-      (*it)->OnDatabaseScanStarted(database);
+      (*it)->OnDPMSDeactivated();
+  }
+}
+
+void XBPython::OnScanStarted(const std::string &library)
+{
+  XBMC_TRACE;
+  LOCK_AND_COPY(std::vector<XBMCAddon::xbmc::Monitor*>,tmp,m_vecMonitorCallbackList);
+  for (MonitorCallbackList::iterator it = tmp.begin(); (it != tmp.end()); ++it)
+  {
+    if (CHECK_FOR_ENTRY(m_vecMonitorCallbackList,(*it)))
+      (*it)->OnScanStarted(library);
+  }
+}
+
+void XBPython::OnScanFinished(const std::string &library)
+{
+  XBMC_TRACE;
+  LOCK_AND_COPY(std::vector<XBMCAddon::xbmc::Monitor*>,tmp,m_vecMonitorCallbackList);
+  for (MonitorCallbackList::iterator it = tmp.begin(); (it != tmp.end()); ++it)
+  {
+    if (CHECK_FOR_ENTRY(m_vecMonitorCallbackList,(*it)))
+      (*it)->OnScanFinished(library);
   }
 }
 
@@ -566,7 +592,7 @@ void XBPython::Uninitialize()
   // don't handle any more announcements as most scripts are probably already
   // stopped and executing a callback on one of their already destroyed classes
   // would lead to a crash
-  CAnnouncementManager::RemoveAnnouncer(this);
+  CAnnouncementManager::Get().RemoveAnnouncer(this);
 
   LOCK_AND_COPY(std::vector<PyElem>,tmpvec,m_vecPyList);
   m_vecPyList.clear();

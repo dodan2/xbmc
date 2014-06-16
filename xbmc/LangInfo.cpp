@@ -24,7 +24,6 @@
 #include "FileItem.h"
 #include "Util.h"
 #include "filesystem/Directory.h"
-#include "guilib/GUIFontManager.h"
 #include "guilib/LocalizeStrings.h"
 #include "pvr/PVRManager.h"
 #include "settings/AdvancedSettings.h"
@@ -449,14 +448,6 @@ bool CLangInfo::SetLanguage(const std::string &strLanguage)
   if (!Load(strLangInfoPath))
     return false;
 
-  if (ForceUnicodeFont() && !g_fontManager.IsFontSetUnicode())
-  {
-    CLog::Log(LOGINFO, "Language needs a ttf font, loading first ttf font available");
-    CStdString strFontSet;
-    if (!g_fontManager.GetFirstFontSetUnicode(strFontSet))
-      CLog::Log(LOGERROR, "No ttf font found but needed: %s", strFontSet.c_str());
-  }
-
   if (!g_localizeStrings.Load("special://xbmc/language/", strLanguage))
     return false;
 
@@ -579,7 +570,7 @@ const CStdString& CLangInfo::GetMeridiemSymbol(MERIDIEM_SYMBOL symbol) const
 }
 
 // Fills the array with the region names available for this language
-void CLangInfo::GetRegionNames(CStdStringArray& array)
+void CLangInfo::GetRegionNames(vector<string>& array)
 {
   for (ITMAPREGIONS it=m_regions.begin(); it!=m_regions.end(); ++it)
   {
@@ -633,7 +624,7 @@ const CStdString& CLangInfo::GetSpeedUnitString() const
   return g_localizeStrings.Get(SPEED_UNIT_STRINGS+m_currentRegion->m_speedUnit);
 }
 
-void CLangInfo::SettingOptionsLanguagesFiller(const CSetting *setting, std::vector< std::pair<std::string, std::string> > &list, std::string &current)
+void CLangInfo::SettingOptionsLanguagesFiller(const CSetting *setting, std::vector< std::pair<std::string, std::string> > &list, std::string &current, void *data)
 {
   //find languages...
   CFileItemList items;
@@ -660,7 +651,7 @@ void CLangInfo::SettingOptionsLanguagesFiller(const CSetting *setting, std::vect
     list.push_back(make_pair(vecLanguage[i], vecLanguage[i]));
 }
 
-void CLangInfo::SettingOptionsStreamLanguagesFiller(const CSetting *setting, std::vector< std::pair<std::string, std::string> > &list, std::string &current)
+void CLangInfo::SettingOptionsStreamLanguagesFiller(const CSetting *setting, std::vector< std::pair<std::string, std::string> > &list, std::string &current, void *data)
 {
   list.push_back(make_pair(g_localizeStrings.Get(308), "original"));
   list.push_back(make_pair(g_localizeStrings.Get(309), "default"));
@@ -672,9 +663,9 @@ void CLangInfo::SettingOptionsStreamLanguagesFiller(const CSetting *setting, std
     list.push_back(make_pair(*language, *language));
 }
 
-void CLangInfo::SettingOptionsRegionsFiller(const CSetting *setting, std::vector< std::pair<std::string, std::string> > &list, std::string &current)
+void CLangInfo::SettingOptionsRegionsFiller(const CSetting *setting, std::vector< std::pair<std::string, std::string> > &list, std::string &current, void *data)
 {
-  CStdStringArray regions;
+  vector<string> regions;
   g_langInfo.GetRegionNames(regions);
   sort(regions.begin(), regions.end(), sortstringbyname());
 

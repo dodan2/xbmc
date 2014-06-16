@@ -120,9 +120,9 @@ CDateTime CMythSession::GetValue(cmyth_timestamp_t t)
   return result;
 }
 
-CStdString CMythSession::GetValue(char *str)
+std::string CMythSession::GetValue(char *str)
 {
-  CStdString result;
+  std::string result;
   if (str)
   {
     result = str;
@@ -373,7 +373,7 @@ CMythSession::CMythSession(const CURL& url) : CThread("MythSession")
   if (m_dll->IsLoaded())
   {
     m_dll->set_dbg_msgcallback(&CMythSession::LogCMyth);
-    if (g_advancedSettings.m_extraLogLevels & LOGCMYTH)
+    if (g_advancedSettings.CanLogComponent(LOGCMYTH))
       m_dll->dbg_level(CMYTH_DBG_ALL);
     else if (g_advancedSettings.m_logLevel >= LOG_LEVEL_DEBUG)
       m_dll->dbg_level(CMYTH_DBG_DETAIL);

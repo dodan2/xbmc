@@ -35,6 +35,23 @@ unsigned int CAEUtil::m_seed = (unsigned int)(CurrentHostCounter() / 1000.0f);
   MEMALIGN(16, __m128i CAEUtil::m_sseSeed) = _mm_set_epi32(CAEUtil::m_seed, CAEUtil::m_seed+1, CAEUtil::m_seed, CAEUtil::m_seed+1);
 #endif
 
+void   AEDelayStatus::SetDelay(double d)
+{
+  delay = d;
+  tick  = CurrentHostCounter();
+}
+
+double AEDelayStatus::GetDelay()
+{
+  double d = delay;
+  if(tick)
+    d -= (double)(CurrentHostCounter() - tick) / CurrentHostFrequency();
+  if(d < 0)
+    return 0.0;
+  else
+    return d;
+}
+
 CAEChannelInfo CAEUtil::GuessChLayout(const unsigned int channels)
 {
   CLog::Log(LOGWARNING, "CAEUtil::GuessChLayout - "
@@ -82,7 +99,6 @@ const unsigned int CAEUtil::DataFormatToBits(const enum AEDataFormat dataFormat)
   static const unsigned int formats[AE_FMT_MAX] =
   {
     8,                   /* U8     */
-    8,                   /* S8     */
 
     16,                  /* S16BE  */
     16,                  /* S16LE  */
@@ -95,6 +111,7 @@ const unsigned int CAEUtil::DataFormatToBits(const enum AEDataFormat dataFormat)
     32,                  /* S24BE  */
     32,                  /* S24LE  */
     32,                  /* S24NE  */
+    32,                  /* S24NER */
     
     24,                  /* S24BE3 */
     24,                  /* S24LE3 */
@@ -115,6 +132,7 @@ const unsigned int CAEUtil::DataFormatToBits(const enum AEDataFormat dataFormat)
     16,                  /* S16NEP */
     32,                  /* S32NEP */
     32,                  /* S24NEP */
+    32,                  /* S24NERP*/
     24,                  /* S24NE3P*/
     sizeof(double) << 3, /* DOUBLEP */
     sizeof(float ) << 3  /* FLOATP  */
@@ -125,10 +143,19 @@ const unsigned int CAEUtil::DataFormatToBits(const enum AEDataFormat dataFormat)
 
 const unsigned int CAEUtil::DataFormatToUsedBits(const enum AEDataFormat dataFormat)
 {
-  if (dataFormat == AE_FMT_S24BE4 || dataFormat == AE_FMT_S24LE4 || dataFormat == AE_FMT_S24NE4)
+  if (dataFormat == AE_FMT_S24BE4 || dataFormat == AE_FMT_S24LE4 ||
+      dataFormat == AE_FMT_S24NE4 || dataFormat == AE_FMT_S24NE4MSB)
     return 24;
   else
     return DataFormatToBits(dataFormat);
+}
+
+const unsigned int CAEUtil::DataFormatToDitherBits(const enum AEDataFormat dataFormat)
+{
+  if (dataFormat == AE_FMT_S24NE4MSB)
+    return 8;
+  else
+    return 0;
 }
 
 const char* CAEUtil::DataFormatToStr(const enum AEDataFormat dataFormat)
@@ -139,7 +166,6 @@ const char* CAEUtil::DataFormatToStr(const enum AEDataFormat dataFormat)
   static const char *formats[AE_FMT_MAX] =
   {
     "AE_FMT_U8",
-    "AE_FMT_S8",
 
     "AE_FMT_S16BE",
     "AE_FMT_S16LE",
@@ -152,6 +178,7 @@ const char* CAEUtil::DataFormatToStr(const enum AEDataFormat dataFormat)
     "AE_FMT_S24BE4",
     "AE_FMT_S24LE4",
     "AE_FMT_S24NE4",  /* S24 in 4 bytes */
+    "AE_FMT_S24NE4MSB",
     
     "AE_FMT_S24BE3",
     "AE_FMT_S24LE3",
@@ -174,6 +201,7 @@ const char* CAEUtil::DataFormatToStr(const enum AEDataFormat dataFormat)
     "AE_FMT_S16NEP",
     "AE_FMT_S32NEP",
     "AE_FMT_S24NE4P",
+    "AE_FMT_S24NE4MSBP",
     "AE_FMT_S24NE3P",
     "AE_FMT_DOUBLEP",
     "AE_FMT_FLOATP"
