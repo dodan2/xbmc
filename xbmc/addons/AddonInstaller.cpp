@@ -163,6 +163,9 @@ bool CAddonInstaller::Cancel(const CStdString &addonID)
 
 bool CAddonInstaller::PromptForInstall(const CStdString &addonID, AddonPtr &addon)
 {
+  if (!g_passwordManager.CheckMenuLock(WINDOW_ADDON_BROWSER))
+    return false;
+
   // we assume that addons that are enabled don't get to this routine (i.e. that GetAddon() has been called)
   if (CAddonMgr::Get().GetAddon(addonID, addon, ADDON_UNKNOWN, false))
     return false; // addon is installed but disabled, and the user has specifically activated something that needs
@@ -210,6 +213,9 @@ bool CAddonInstaller::PromptForInstall(const CStdString &addonID, AddonPtr &addo
 
 bool CAddonInstaller::Install(const CStdString &addonID, bool force, const CStdString &referer, bool background)
 {
+  if (!g_passwordManager.CheckMenuLock(WINDOW_ADDON_BROWSER))
+    return false;
+
   AddonPtr addon;
   bool addonInstalled = CAddonMgr::Get().GetAddon(addonID, addon, ADDON_UNKNOWN, false);
   if (addonInstalled && !force)
@@ -270,11 +276,14 @@ bool CAddonInstaller::DoInstall(const AddonPtr &addon, const CStdString &hash, b
 
 bool CAddonInstaller::InstallFromZip(const CStdString &path)
 {
+  if (!g_passwordManager.CheckMenuLock(WINDOW_ADDON_BROWSER))
+    return false;
+
   // grab the descriptive XML document from the zip, and read it in
   CFileItemList items;
   // BUG: some zip files return a single item (root folder) that we think is stored, so we don't use the zip:// protocol
-  CStdString zipDir;
-  URIUtils::CreateArchivePath(zipDir, "zip", path, "");
+  CURL pathToUrl(path);
+  CURL zipDir = URIUtils::CreateArchivePath("zip", pathToUrl, "");
   if (!CDirectory::GetDirectory(zipDir, items) || items.Size() != 1 || !items[0]->m_bIsFolder)
   {
     CGUIDialogKaiToast::QueueNotification("", path, g_localizeStrings.Get(24045), TOAST_DISPLAY_TIME, false);
@@ -290,6 +299,7 @@ bool CAddonInstaller::InstallFromZip(const CStdString &path)
   {
     // set the correct path
     addon->Props().path = items[0]->GetPath();
+    addon->Props().icon = URIUtils::AddFileToFolder(items[0]->GetPath(), "icon.png");
 
     // install the addon
     return DoInstall(addon);
@@ -577,8 +587,7 @@ bool CAddonInstallJob::DoWork()
       }
 
       // check the archive as well - should have just a single folder in the root
-      CStdString archive;
-      URIUtils::CreateArchivePath(archive,"zip",package,"");
+      CURL archive = URIUtils::CreateArchivePath("zip",CURL(package),"");
 
       CFileItemList archivedFiles;
       CDirectory::GetDirectory(archive, archivedFiles);

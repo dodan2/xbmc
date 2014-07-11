@@ -623,6 +623,16 @@ bool CGUIEPGGridContainer::OnAction(const CAction &action)
       // use base class implementation
       return CGUIControl::OnAction(action);
 
+    case ACTION_NEXT_ITEM:
+      // skip +12h
+      ScrollToBlockOffset(m_blockOffset + (12 * 60  / MINSPERBLOCK));
+      return true;
+
+    case ACTION_PREV_ITEM:
+      // skip -12h
+      ScrollToBlockOffset(m_blockOffset - (12 * 60 / MINSPERBLOCK));
+      return true;
+
     case ACTION_PAGE_UP:
       if (m_channelOffset == 0)
       { // already on the first page, so move to the first item
@@ -1327,9 +1337,9 @@ CGUIListItemPtr CGUIEPGGridContainer::GetListItem(int offset, unsigned int flag)
   return CGUIListItemPtr();
 }
 
-CStdString CGUIEPGGridContainer::GetLabel(int info) const
+std::string CGUIEPGGridContainer::GetLabel(int info) const
 {
-  CStdString label;
+  std::string label;
   switch (info)
   {
   case CONTAINER_NUM_PAGES:
@@ -1590,9 +1600,9 @@ void CGUIEPGGridContainer::LoadLayout(TiXmlElement *layout)
   }
 }
 
-CStdString CGUIEPGGridContainer::GetDescription() const
+std::string CGUIEPGGridContainer::GetDescription() const
 {
-  CStdString strLabel;
+  std::string strLabel;
   int item = GetSelectedItem();
   if (item >= 0 && item < (int)m_programmeItems.size())
   {
