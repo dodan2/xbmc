@@ -1121,7 +1121,6 @@ int  CMusicDatabase::UpdateArtist(int idArtist,
 {
   CScraperUrl thumbURL;
   CFanart fanart;
-  std::vector<std::pair<CStdString,CStdString> > discography;
   if (idArtist < 0)
     return -1;
 
@@ -1701,7 +1700,7 @@ bool CMusicDatabase::GetSongByFileName(const CStdString& strFileNameAndPath, CSo
   song.Clear();
   CURL url(strFileNameAndPath);
 
-  if (url.GetProtocol()=="musicdb")
+  if (url.IsProtocol("musicdb"))
   {
     CStdString strFile = URIUtils::GetFileName(strFileNameAndPath);
     URIUtils::RemoveExtension(strFile);
@@ -3003,6 +3002,7 @@ bool CMusicDatabase::GetAlbumsByYear(const CStdString& strBaseDir, CFileItemList
     return false;
 
   musicUrl.AddOption("year", year);
+  musicUrl.AddOption("singles", true); // allow singles to be listed
   
   Filter filter;
   return GetAlbumsByWhere(musicUrl.ToString(), filter, items);
@@ -3903,7 +3903,6 @@ void CMusicDatabase::UpdateTables(int version)
     m_pDS->exec("ALTER TABLE album_artist ADD strArtist text\n");
     m_pDS->exec("ALTER TABLE song_artist ADD strArtist text\n");
     // populate these
-    map<int, string> artists;
     CStdString sql = "select idArtist,strArtist from artist";
     m_pDS->query(sql.c_str());
     while (!m_pDS->eof())
@@ -4458,7 +4457,7 @@ int CMusicDatabase::GetSongIDFromPath(const CStdString &filePath)
 {
   // grab the where string to identify the song id
   CURL url(filePath);
-  if (url.GetProtocol()=="musicdb")
+  if (url.IsProtocol("musicdb"))
   {
     CStdString strFile=URIUtils::GetFileName(filePath);
     URIUtils::RemoveExtension(strFile);
@@ -5599,7 +5598,11 @@ bool CMusicDatabase::GetFilter(CDbUrl &musicUrl, Filter &filter, SortDescription
                                       option->second.asString().c_str(), option->second.asString().c_str()));
       // no artist given, so exclude any single albums (aka empty tagged albums)
       else
-        filter.AppendWhere("albumview.strAlbum <> ''");
+      {
+        option = options.find("singles");
+        if (option == options.end() || !option->second.asBoolean())
+          filter.AppendWhere("albumview.strAlbum <> ''");
+      }
     }
   }
   else if (type == "songs" || type == "singles")

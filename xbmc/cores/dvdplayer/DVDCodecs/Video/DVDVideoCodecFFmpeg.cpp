@@ -162,7 +162,12 @@ CDVDVideoCodecFFmpeg::CDVDVideoCodecFFmpeg() : CDVDVideoCodec()
   m_iScreenHeight = 0;
   m_iOrientation = 0;
   m_bSoftware = false;
+#if defined(TARGET_ANDROID) || defined(TARGET_DARWIN_IOS)
+  // If we get here on Android or iOS, it's always software
+  m_isSWCodec = true;
+#else
   m_isSWCodec = false;
+#endif
   m_pHardware = NULL;
   m_iLastKeyframe = 0;
   m_dts = DVD_NOPTS_VALUE;
@@ -210,7 +215,8 @@ bool CDVDVideoCodecFFmpeg::Open(CDVDStreamInfo &hints, CDVDCodecOptions &options
       break;
     }
   }
-  else if (hints.codec == AV_CODEC_ID_HEVC)
+  else if (hints.codec == AV_CODEC_ID_HEVC
+        || hints.codec == AV_CODEC_ID_VP9)
     m_isSWCodec = true;
 
   if(pCodec == NULL)
@@ -236,16 +242,8 @@ bool CDVDVideoCodecFFmpeg::Open(CDVDStreamInfo &hints, CDVDCodecOptions &options
   /* Only allow slice threading, since frame threading is more
    * sensitive to changes in frame sizes, and it causes crashes
    * during HW accell - so we unset it in this case.
-   *
-   * When we detect a pure SW codec and user did not disable SWmultithreading
-   * via advancedsettings.xml we keep the ffmpeg default thread type.
    * */
-  if(m_isSWCodec && !g_advancedSettings.m_videoDisableSWMultithreading)
-  {
-    CLog::Log(LOGDEBUG,"CDVDVideoCodecFFmpeg::Open() Keep default threading for swcodec: %d",
-                        m_pCodecContext->thread_type);
-  }
-  else if ((EDECODEMETHOD) CSettings::Get().GetInt("videoplayer.decodingmethod") == VS_DECODEMETHOD_SOFTWARE && CSettings::Get().GetBool("videoplayer.useframemtdec"))
+  if (((EDECODEMETHOD) CSettings::Get().GetInt("videoplayer.decodingmethod") == VS_DECODEMETHOD_SOFTWARE || m_isSWCodec) && CSettings::Get().GetBool("videoplayer.useframemtdec"))
   {
     CLog::Log(LOGDEBUG,"CDVDVideoCodecFFmpeg::Open() Keep default threading %d by videoplayer.useframemtdec",
                         m_pCodecContext->thread_type);
@@ -295,7 +293,8 @@ bool CDVDVideoCodecFFmpeg::Open(CDVDStreamInfo &hints, CDVDCodecOptions &options
   if( num_threads > 1 && !hints.software && m_pHardware == NULL // thumbnail extraction fails when run threaded
   && ( pCodec->id == AV_CODEC_ID_H264
     || pCodec->id == AV_CODEC_ID_MPEG4
-    || pCodec->id == AV_CODEC_ID_HEVC))
+    || pCodec->id == AV_CODEC_ID_HEVC
+    || pCodec->id == AV_CODEC_ID_VP9))
     m_pCodecContext->thread_count = num_threads;
 
   if (avcodec_open2(m_pCodecContext, pCodec, NULL) < 0)
@@ -700,10 +699,10 @@ int CDVDVideoCodecFFmpeg::FilterOpen(const std::string& filters, bool scale)
                                         m_pCodecContext->width,
                                         m_pCodecContext->height,
                                         m_pCodecContext->pix_fmt,
-                                        m_pCodecContext->time_base.num,
-                                        m_pCodecContext->time_base.den,
-                                        m_pCodecContext->sample_aspect_ratio.num,
-                                        m_pCodecContext->sample_aspect_ratio.den);
+                                        m_pCodecContext->time_base.num ? m_pCodecContext->time_base.num : 1,
+                                        m_pCodecContext->time_base.num ? m_pCodecContext->time_base.den : 1,
+                                        m_pCodecContext->sample_aspect_ratio.num != 0 ? m_pCodecContext->sample_aspect_ratio.num : 1,
+                                        m_pCodecContext->sample_aspect_ratio.num != 0 ? m_pCodecContext->sample_aspect_ratio.den : 1);
 
   if ((result = avfilter_graph_create_filter(&m_pFilterIn, srcFilter, "src", args.c_str(), NULL, m_pFilterGraph)) < 0)
   {

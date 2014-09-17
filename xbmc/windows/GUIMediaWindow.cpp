@@ -50,6 +50,7 @@
 #include "dialogs/GUIDialogOK.h"
 #include "playlists/PlayList.h"
 #include "storage/MediaManager.h"
+#include "utils/MarkWatchedJob.h"
 #include "utils/StringUtils.h"
 #include "utils/URIUtils.h"
 #include "guilib/Key.h"
@@ -743,7 +744,6 @@ bool CGUIMediaWindow::Update(const std::string &strDirectory, bool updateFilterP
   // check if the path contains a filter and temporarily remove it
   // so that the retrieved list of items is unfiltered
   bool canfilter = CanContainFilter(directory);
-  std::string filter;
   CURL url(directory);
   if (canfilter && url.HasOption("filter"))
     directory = RemoveParameterFromPath(directory, "filter");
@@ -1111,9 +1111,8 @@ void CGUIMediaWindow::ShowShareErrorMessage(CFileItem* pItem)
 
   int idMessageText = 0;
   CURL url(pItem->GetPath());
-  const std::string& strHostName = url.GetHostName();
 
-  if (url.GetProtocol() == "smb" && strHostName.empty()) //  smb workgroup
+  if (url.IsProtocol("smb") && url.GetHostName().empty()) //  smb workgroup
     idMessageText = 15303; // Workgroup not found
   else if (pItem->m_iDriveType == CMediaSource::SOURCE_TYPE_REMOTE || URIUtils::IsRemote(pItem->GetPath()))
     idMessageText = 15301; // Could not connect to network server
@@ -1570,6 +1569,14 @@ bool CGUIMediaWindow::OnContextButton(int itemNumber, CONTEXT_BUTTON button)
 {
   switch (button)
   {
+  case CONTEXT_BUTTON_MARK_WATCHED:
+  case CONTEXT_BUTTON_MARK_UNWATCHED:
+    {
+      CFileItemPtr item = m_vecItems->Get(itemNumber);
+      m_viewControl.SetSelectedItem(m_viewControl.GetSelectedItem() + 1);
+      CMarkWatchedQueue::Get().AddJob(new CMarkWatchedJob(item, (button == CONTEXT_BUTTON_MARK_WATCHED)));
+      return true;
+    }
   case CONTEXT_BUTTON_ADD_FAVOURITE:
     {
       CFileItemPtr item = m_vecItems->Get(itemNumber);

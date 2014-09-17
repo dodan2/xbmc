@@ -32,8 +32,9 @@ namespace PVR
     CGUIWindowPVRRecordings(bool bRadio);
     virtual ~CGUIWindowPVRRecordings(void) {};
 
-    static CStdString GetResumeString(const CFileItem& item);
+    static std::string GetResumeString(const CFileItem& item);
 
+    void OnWindowLoaded();
     bool OnMessage(CGUIMessage& message);
     bool OnAction(const CAction &action);
     void GetContextButtons(int itemNumber, CContextButtons &buttons);
@@ -43,7 +44,8 @@ namespace PVR
     void ResetObservers(void);
 
   protected:
-    virtual void AfterUpdate(CFileItemList& items);
+    std::string GetDirectoryPath(void);
+    void OnPrepareFileItems(CFileItemList &items);
 
   private:
     bool OnContextButtonDelete(CFileItem *item, CONTEXT_BUTTON button);

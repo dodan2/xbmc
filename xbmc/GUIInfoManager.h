@@ -215,6 +215,8 @@ namespace INFO
 #define MUSICPLAYER_CHANNEL_NAME    229
 #define MUSICPLAYER_CHANNEL_NUMBER  230
 #define MUSICPLAYER_CHANNEL_GROUP   231
+#define MUSICPLAYER_SUB_CHANNEL_NUMBER 232
+#define MUSICPLAYER_CHANNEL_NUMBER_LBL 233
 
 #define VIDEOPLAYER_TITLE             250
 #define VIDEOPLAYER_GENRE             251
@@ -279,6 +281,8 @@ namespace INFO
 #define VIDEOPLAYER_STEREOSCOPIC_MODE 311
 #define VIDEOPLAYER_SUBTITLES_LANG    312
 #define VIDEOPLAYER_AUDIO_LANG        313
+#define VIDEOPLAYER_SUB_CHANNEL_NUMBER 314
+#define VIDEOPLAYER_CHANNEL_NUMBER_LBL 315
 
 #define CONTAINER_CAN_FILTER         342
 #define CONTAINER_CAN_FILTERADVANCED 343
@@ -649,6 +653,8 @@ namespace INFO
 #define LISTITEM_IS_STEREOSCOPIC    (LISTITEM_START + 141)
 #define LISTITEM_INPROGRESS         (LISTITEM_START + 142)
 #define LISTITEM_HASRECORDING       (LISTITEM_START + 143)
+#define LISTITEM_SUB_CHANNEL_NUMBER (LISTITEM_START + 144)
+#define LISTITEM_CHANNEL_NUMBER_LBL (LISTITEM_START + 145)
 
 #define LISTITEM_PROPERTY_START     (LISTITEM_START + 200)
 #define LISTITEM_PROPERTY_END       (LISTITEM_PROPERTY_START + 1000)
@@ -666,7 +672,6 @@ namespace INFO
 #define COMBINED_VALUES_START        100000
 
 // forward
-class CInfoLabel;
 class CGUIWindow;
 namespace EPG { class CEpgInfoTag; }
 
@@ -786,6 +791,7 @@ public:
   int GetTotalPlayTime() const;
   CStdString GetCurrentPlayTimeRemaining(TIME_FORMAT format) const;
   std::string GetVersionShort(void);
+  CStdString GetAppName();
   CStdString GetVersion();
   CStdString GetBuild();
 

@@ -29,9 +29,6 @@
 #include "android/activity/AndroidFeatures.h"
 #endif // defined(TARGET_ANDROID)
 #include "cores/AudioEngine/AEFactory.h"
-#if defined(HAVE_LIBCRYSTALHD)
-#include "cores/dvdplayer/DVDCodecs/Video/CrystalHD.h"
-#endif // defined(HAVE_LIBCRYSTALHD)
 #include "cores/dvdplayer/DVDCodecs/Video/DVDVideoCodec.h"
 #include "guilib/LocalizeStrings.h"
 #include "peripherals/Peripherals.h"
@@ -227,13 +224,11 @@ void CSettingConditions::Initialize()
 #ifdef HAS_ZEROCONF
   m_simpleConditions.insert("has_zeroconf");
 #endif
-#ifdef HAVE_LIBCRYSTALHD
-  m_simpleConditions.insert("have_libcrystalhd");
-  if (CCrystalHD::GetInstance()->DevicePresent())
-    m_simpleConditions.insert("hascrystalhddevice");
-#endif
 #ifdef HAVE_LIBOPENMAX
   m_simpleConditions.insert("have_libopenmax");
+#endif
+#ifdef HAS_OMXPLAYER
+  m_simpleConditions.insert("has_omxplayer");
 #endif
 #ifdef HAVE_LIBVA
   m_simpleConditions.insert("have_libva");

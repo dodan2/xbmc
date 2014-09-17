@@ -35,7 +35,6 @@
 #include "pvr/addons/PVRClients.h"
 #include "pvr/timers/PVRTimers.h"
 
-using namespace std;
 using namespace PVR;
 using namespace EPG;
 
@@ -103,6 +102,22 @@ void CGUIWindowPVRGuide::GetContextButtons(int itemNumber, CContextButtons &butt
     buttons.Add(CONTEXT_BUTTON_MENU_HOOKS, 19195);      /* PVR client specific action */
 }
 
+void CGUIWindowPVRGuide::UpdateSelectedItemPath()
+{
+  if (m_viewControl.GetCurrentControl() == GUIDE_VIEW_TIMELINE)
+  {
+    CGUIEPGGridContainer *epgGridContainer = (CGUIEPGGridContainer*) GetControl(m_viewControl.GetCurrentControl());
+    if (epgGridContainer)
+    {
+      CPVRChannel* channel = epgGridContainer->GetChannel(epgGridContainer->GetSelectedChannel());
+      if (channel != NULL)
+        m_selectedItemPaths.at(m_bRadio) = channel->Path();
+    }
+  }
+  else
+    CGUIWindowPVRBase::UpdateSelectedItemPath();
+}
+
 bool CGUIWindowPVRGuide::OnAction(const CAction &action)
 {
   switch (action.GetID())
@@ -135,7 +150,7 @@ bool CGUIWindowPVRGuide::OnMessage(CGUIMessage& message)
       if (message.GetSenderId() == m_viewControl.GetCurrentControl())
       {
         int iItem = m_viewControl.GetSelectedItem();
-        if (iItem > 0 || iItem < (int) m_vecItems->Size())
+        if (iItem >= 0 && iItem < m_vecItems->Size())
         {
           CFileItemPtr pItem = m_vecItems->Get(iItem);
           /* process actions */
@@ -224,7 +239,7 @@ bool CGUIWindowPVRGuide::OnMessage(CGUIMessage& message)
 
 bool CGUIWindowPVRGuide::OnContextButton(int itemNumber, CONTEXT_BUTTON button)
 {
-  if (itemNumber < 0 || itemNumber >= (int) m_vecItems->Size())
+  if (itemNumber < 0 || itemNumber >= m_vecItems->Size())
     return false;
   CFileItemPtr pItem = m_vecItems->Get(itemNumber);
 
@@ -278,6 +293,7 @@ void CGUIWindowPVRGuide::UpdateViewNow()
   }
 
   m_viewControl.SetItems(*m_vecItems);
+  m_viewControl.SetSelectedItem(m_selectedItemPaths.at(m_bRadio));
 }
 
 void CGUIWindowPVRGuide::UpdateViewNext()
@@ -298,11 +314,15 @@ void CGUIWindowPVRGuide::UpdateViewNext()
   }
 
   m_viewControl.SetItems(*m_vecItems);
+  m_viewControl.SetSelectedItem(m_selectedItemPaths.at(m_bRadio));
 }
 
 void CGUIWindowPVRGuide::UpdateViewTimeline()
 {
   CGUIEPGGridContainer* epgGridContainer = (CGUIEPGGridContainer*) GetControl(m_viewControl.GetCurrentControl());
+  if (!epgGridContainer)
+    return;
+
   CPVRChannelGroupPtr group = GetGroup();
 
   if (m_bUpdateRequired || m_cachedTimeline->IsEmpty() || *m_cachedChannelGroup != *group)
@@ -339,18 +359,8 @@ void CGUIWindowPVRGuide::UpdateViewTimeline()
   SET_CONTROL_LABEL(CONTROL_LABEL_HEADER2, GetGroup()->GroupName());
   
   m_viewControl.SetItems(*m_vecItems);
-}
 
-bool CGUIWindowPVRGuide::SelectPlayingFile(void)
-{
-  if (m_viewControl.GetCurrentControl() == GUIDE_VIEW_TIMELINE)
-  {
-    CGUIEPGGridContainer* epgGridContainer = (CGUIEPGGridContainer*) GetControl(m_viewControl.GetCurrentControl());
-    if (epgGridContainer && g_PVRManager.IsPlaying())
-      epgGridContainer->SetChannel(g_application.CurrentFile());
-    return true;
-  }
-  return false;
+  epgGridContainer->SetChannel(m_selectedItemPaths.at(m_bRadio));
 }
 
 bool CGUIWindowPVRGuide::Update(const std::string &strDirectory, bool updateFilterPath /* = true */)

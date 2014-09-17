@@ -46,11 +46,10 @@ namespace XFILE
     CURL urlZip(urlOrig);
 
     /* if this isn't a proper archive path, assume it's the path to a archive file */
-    if (urlOrig.GetProtocol() != "zip")
+    if (!urlOrig.IsProtocol("zip"))
       urlZip = URIUtils::CreateArchivePath("zip", urlOrig);
 
     CURL url(urlZip);
-    std::string strArchive = url.GetHostName();
     std::string strOptions = url.GetOptions();
     std::string strPathInZip = url.GetFileName();
 

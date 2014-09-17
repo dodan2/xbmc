@@ -51,6 +51,7 @@
 #include "utils/log.h"
 #include "Util.h"
 #include "URL.h"
+#include "utils/XMLUtils.h"
 
 using namespace std;
 using namespace ADDON;
@@ -71,8 +72,8 @@ using XFILE::CDirectory;
 #define ID_BUTTON_DEFAULT               12
 #define CONTROL_HEADING_LABEL           20
 
-#define CONTROL_START_SETTING           100
-#define CONTROL_START_SECTION           200
+#define CONTROL_START_SECTION           100
+#define CONTROL_START_SETTING           200
 
 CGUIDialogAddonSettings::CGUIDialogAddonSettings()
    : CGUIDialogBoxBase(WINDOW_DIALOG_ADDON_SETTINGS, "DialogAddonSettings.xml")
@@ -341,7 +342,6 @@ bool CGUIDialogAddonSettings::ShowVirtualKeyboard(int iControl)
           VECSOURCES localShares;
           if (!shares)
           {
-            VECSOURCES networkShares;
             g_mediaManager.GetLocalDrives(localShares);
             if (!source || strcmpi(source, "local") != 0)
               g_mediaManager.GetNetworkLocations(localShares);
@@ -608,6 +608,12 @@ void CGUIDialogAddonSettings::CreateSections()
     std::string label = GetString(category->Attribute("label"));
     if (label.empty())
       label = g_localizeStrings.Get(128);
+
+    if (buttonID >= CONTROL_START_SETTING)
+    {
+      CLog::Log(LOGERROR, "%s - cannot have more than %d categories - simplify your addon!", __FUNCTION__, CONTROL_START_SETTING - CONTROL_START_SECTION);
+      break;
+    }
 
     // add the category button
     if (button && group)
@@ -892,11 +898,6 @@ void CGUIDialogAddonSettings::CreateControls()
 
     setting = setting->NextSiblingElement("setting");
     controlId++;
-    if (controlId >= CONTROL_START_SECTION)
-    {
-      CLog::Log(LOGERROR, "%s - cannot have more than %d controls per category - simplify your addon!", __FUNCTION__, CONTROL_START_SECTION - CONTROL_START_SETTING);
-      break;
-    }
   }
   EnableControls();
 }

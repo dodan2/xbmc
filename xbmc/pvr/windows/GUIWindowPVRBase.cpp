@@ -45,14 +45,17 @@
 #include "utils/StringUtils.h"
 #include "utils/Observer.h"
 
-using namespace std;
 using namespace PVR;
 using namespace EPG;
+
+std::map<bool, std::string> CGUIWindowPVRBase::m_selectedItemPaths;
 
 CGUIWindowPVRBase::CGUIWindowPVRBase(bool bRadio, int id, const std::string &xmlFile) :
   CGUIMediaWindow(id, xmlFile.c_str()),
   m_bRadio(bRadio)
 {
+  m_selectedItemPaths[false] = "";
+  m_selectedItemPaths[true] = "";
 }
 
 CGUIWindowPVRBase::~CGUIWindowPVRBase(void)
@@ -61,6 +64,7 @@ CGUIWindowPVRBase::~CGUIWindowPVRBase(void)
 
 void CGUIWindowPVRBase::Notify(const Observable &obs, const ObservableMessage msg)
 {
+  UpdateSelectedItemPath();
   CGUIMessage m(GUI_MSG_REFRESH_LIST, GetID(), 0, msg);
   CApplicationMessenger::Get().SendGUIMessage(m);
 }
@@ -103,7 +107,22 @@ void CGUIWindowPVRBase::OnInitWindow(void)
     return;
   }
 
+  m_vecItems->SetPath(GetDirectoryPath());
+
+  // use the path of the current playing channel if no previous selection exists
+  // to mark the corresponding item in the list as selected
+  if (m_selectedItemPaths.at(m_bRadio).empty() && g_PVRManager.IsPlaying())
+    m_selectedItemPaths.at(m_bRadio) = g_application.CurrentFile();
+
   CGUIMediaWindow::OnInitWindow();
+
+  // mark item as selected by channel path
+  m_viewControl.SetSelectedItem(m_selectedItemPaths.at(m_bRadio));
+}
+
+void CGUIWindowPVRBase::OnDeinitWindow(int nextWindowID)
+{
+  UpdateSelectedItemPath();
 }
 
 bool CGUIWindowPVRBase::OnMessage(CGUIMessage& message)
@@ -112,7 +131,10 @@ bool CGUIWindowPVRBase::OnMessage(CGUIMessage& message)
   {
     case GUI_MSG_WINDOW_INIT:
     {
-      m_group = g_PVRManager.GetPlayingGroup(m_bRadio);
+      CPVRChannelGroupPtr group = g_PVRManager.GetPlayingGroup(m_bRadio);
+      if (m_group != group)
+        m_viewControl.SetSelectedItem(0);
+      m_group = group;
       SetProperty("IsRadio", m_bRadio ? "true" : "");
     }
     break;
@@ -129,6 +151,48 @@ bool CGUIWindowPVRBase::OnMessage(CGUIMessage& message)
   }
 
   return CGUIMediaWindow::OnMessage(message);
+}
+
+bool CGUIWindowPVRBase::OnContextButton(int itemNumber, CONTEXT_BUTTON button)
+{
+  bool bReturn = false;
+
+  switch(button)
+  {
+    case CONTEXT_BUTTON_MENU_HOOKS:
+      if (itemNumber >= 0 && itemNumber < m_vecItems->Size())
+      {
+        CFileItemPtr item = m_vecItems->Get(itemNumber);
+
+        if (item->IsEPG() && item->GetEPGInfoTag()->HasPVRChannel())
+          g_PVRClients->ProcessMenuHooks(item->GetEPGInfoTag()->ChannelTag()->ClientID(), PVR_MENUHOOK_EPG, item.get());
+        else if (item->IsPVRChannel())
+          g_PVRClients->ProcessMenuHooks(item->GetPVRChannelInfoTag()->ClientID(), PVR_MENUHOOK_CHANNEL, item.get());
+        else if (item->IsPVRRecording())
+          g_PVRClients->ProcessMenuHooks(item->GetPVRRecordingInfoTag()->m_iClientId, PVR_MENUHOOK_RECORDING, item.get());
+        else if (item->IsPVRTimer())
+          g_PVRClients->ProcessMenuHooks(item->GetPVRTimerInfoTag()->m_iClientId, PVR_MENUHOOK_TIMER, item.get());
+
+        bReturn = true;
+      }
+      break;
+    case CONTEXT_BUTTON_FIND:
+    {
+      int windowSearchId = m_bRadio ? WINDOW_RADIO_SEARCH : WINDOW_TV_SEARCH;
+      CGUIWindowPVRBase *windowSearch = (CGUIWindowPVRBase*) g_windowManager.GetWindow(windowSearchId);
+      if (windowSearch && itemNumber >= 0 && itemNumber < m_vecItems->Size())
+      {
+        CFileItemPtr item = m_vecItems->Get(itemNumber);
+        g_windowManager.ActivateWindow(windowSearchId);
+        bReturn = windowSearch->OnContextButton(*item.get(), button);
+      }
+      break;
+    }
+    default:
+      bReturn = false;
+  }
+
+  return bReturn || CGUIMediaWindow::OnContextButton(itemNumber, button);
 }
 
 void CGUIWindowPVRBase::SetInvalid()
@@ -187,7 +251,7 @@ void CGUIWindowPVRBase::SetGroup(CPVRChannelGroupPtr group)
     // we need to register the window to receive changes from the new group
     m_group->RegisterObserver(this);
     g_PVRManager.SetPlayingGroup(m_group);
-    Refresh();
+    Update(GetDirectoryPath());
   }
 }
 
@@ -236,10 +300,10 @@ bool CGUIWindowPVRBase::PlayFile(CFileItem *item, bool bPlayMinimized /* = false
 
     if (!bSwitchSuccessful)
     {
-      CStdString channelName = g_localizeStrings.Get(19029); // Channel
+      std::string channelName = g_localizeStrings.Get(19029); // Channel
       if (channel)
         channelName = channel->ChannelName();
-      CStdString msg = StringUtils::Format(g_localizeStrings.Get(19035).c_str(), channelName.c_str()); // CHANNELNAME could not be played. Check the log for details.
+      std::string msg = StringUtils::Format(g_localizeStrings.Get(19035).c_str(), channelName.c_str()); // CHANNELNAME could not be played. Check the log for details.
 
       CGUIDialogKaiToast::QueueNotification(CGUIDialogKaiToast::Error,
               g_localizeStrings.Get(19166), // PVR information
@@ -315,7 +379,7 @@ bool CGUIWindowPVRBase::PlayRecording(CFileItem *item, bool bPlayMinimized /* = 
   if (!item->HasPVRRecordingInfoTag())
     return false;
 
-  CStdString stream = item->GetPVRRecordingInfoTag()->m_strStreamURL;
+  std::string stream = item->GetPVRRecordingInfoTag()->m_strStreamURL;
   if (stream.empty())
   {
     CApplicationMessenger::Get().PlayFile(*item, false);
@@ -324,23 +388,23 @@ bool CGUIWindowPVRBase::PlayRecording(CFileItem *item, bool bPlayMinimized /* = 
 
   /* Isolate the folder from the filename */
   size_t found = stream.find_last_of("/");
-  if (found == CStdString::npos)
+  if (found == std::string::npos)
     found = stream.find_last_of("\\");
 
-  if (found != CStdString::npos)
+  if (found != std::string::npos)
   {
     /* Check here for asterisk at the begin of the filename */
     if (stream[found+1] == '*')
     {
       /* Create a "stack://" url with all files matching the extension */
-      CStdString ext = URIUtils::GetExtension(stream);
-      CStdString dir = stream.substr(0, found).c_str();
+      std::string ext = URIUtils::GetExtension(stream);
+      std::string dir = stream.substr(0, found);
 
       CFileItemList items;
       XFILE::CDirectory::GetDirectory(dir, items);
       items.Sort(SortByFile, SortOrderAscending);
 
-      vector<int> stack;
+      std::vector<int> stack;
       for (int i = 0; i < items.Size(); ++i)
       {
         if (URIUtils::HasExtension(items[i]->GetPath(), ext))
@@ -351,7 +415,7 @@ bool CGUIWindowPVRBase::PlayRecording(CFileItem *item, bool bPlayMinimized /* = 
       {
         /* If we have a stack change the path of the item to it */
         XFILE::CStackDirectory dir;
-        CStdString stackPath = dir.ConstructStackPath(items, stack);
+        std::string stackPath = dir.ConstructStackPath(items, stack);
         item->SetPath(stackPath);
       }
     }
@@ -422,7 +486,7 @@ void CGUIWindowPVRBase::ShowEPGInfo(CFileItem *item)
 
 bool CGUIWindowPVRBase::ActionInputChannelNumber(int input)
 {
-  CStdString strInput = StringUtils::Format("%i", input);
+  std::string strInput = StringUtils::Format("%i", input);
   if (CGUIDialogNumeric::ShowAndGetNumber(strInput, g_localizeStrings.Get(19103)))
   {
     int iChannelNumber = atoi(strInput.c_str());
@@ -496,7 +560,7 @@ bool CGUIWindowPVRBase::ActionPlayEpg(CFileItem *item)
   if (!PlayFile(&fileItem))
   {
     // CHANNELNAME could not be played. Check the log for details.
-    CStdString msg = StringUtils::Format(g_localizeStrings.Get(19035).c_str(), channel->ChannelName().c_str());
+    std::string msg = StringUtils::Format(g_localizeStrings.Get(19035).c_str(), channel->ChannelName().c_str());
     CGUIDialogOK::ShowAndGetInput(19033, 0, msg, 0);
     return false;
   }
@@ -629,6 +693,7 @@ bool CGUIWindowPVRBase::UpdateEpgForChannel(CFileItem *item)
 
 bool CGUIWindowPVRBase::Update(const std::string &strDirectory, bool updateFilterPath /* = true */)
 {
+  m_vecItems->SetPath(strDirectory);
   return CGUIMediaWindow::Update(strDirectory, updateFilterPath);
 }
 
@@ -636,4 +701,15 @@ void CGUIWindowPVRBase::UpdateButtons(void)
 {
   CGUIMediaWindow::UpdateButtons();
   SET_CONTROL_LABEL(CONTROL_BTNCHANNELGROUPS, g_localizeStrings.Get(19141) + ": " + (m_group->GroupType() == PVR_GROUP_TYPE_INTERNAL ? g_localizeStrings.Get(19287) : m_group->GroupName()));
+}
+
+void CGUIWindowPVRBase::UpdateSelectedItemPath()
+{
+  int selectedItem = m_viewControl.GetSelectedItem();
+  if (selectedItem > -1)
+  {
+    CFileItemPtr fileItem = m_vecItems->Get(selectedItem);
+    if (fileItem)
+      m_selectedItemPaths.at(m_bRadio) = fileItem->GetPath();
+  }
 }

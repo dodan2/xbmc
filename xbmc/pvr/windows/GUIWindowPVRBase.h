@@ -24,6 +24,9 @@
 #include "pvr/channels/PVRChannelGroupsContainer.h"
 
 #define CONTROL_BTNVIEWASICONS            2
+#define CONTROL_BTNSORTBY                 3
+#define CONTROL_BTNSORTASC                4
+#define CONTROL_BTNGROUPITEMS             5
 #define CONTROL_BTNCHANNELGROUPS          28
 
 #define CONTROL_LABEL_HEADER1             29
@@ -50,8 +53,12 @@ namespace PVR
   class CGUIWindowPVRBase : public CGUIMediaWindow, public Observer
   {
   public:
+    virtual ~CGUIWindowPVRBase(void);
     virtual void OnInitWindow(void);
+    virtual void OnDeinitWindow(int nextWindowID);
     virtual bool OnMessage(CGUIMessage& message);
+    virtual bool OnContextButton(int itemNumber, CONTEXT_BUTTON button);
+    virtual bool OnContextButton(const CFileItem &item, CONTEXT_BUTTON button) { return false; };
     virtual bool Update(const std::string &strDirectory, bool updateFilterPath = true);
     virtual void UpdateButtons(void);
     virtual bool OnAction(const CAction &action);
@@ -63,8 +70,8 @@ namespace PVR
 
   protected:
     CGUIWindowPVRBase(bool bRadio, int id, const std::string &xmlFile);
-    virtual ~CGUIWindowPVRBase(void);
 
+    virtual std::string GetDirectoryPath(void) { return ""; };
     virtual CPVRChannelGroupPtr GetGroup(void);
     virtual void SetGroup(CPVRChannelGroupPtr group);
 
@@ -82,6 +89,9 @@ namespace PVR
     virtual void ShowEPGInfo(CFileItem *item);
     virtual void ShowRecordingInfo(CFileItem *item);
     virtual bool UpdateEpgForChannel(CFileItem *item);
+    virtual void UpdateSelectedItemPath();
+
+    static std::map<bool, std::string> m_selectedItemPaths;
 
     CCriticalSection m_critSection;
     bool m_bRadio;

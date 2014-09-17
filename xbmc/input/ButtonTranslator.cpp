@@ -34,6 +34,7 @@
 #include "utils/log.h"
 #include "utils/XBMCTinyXML.h"
 #include "XBIRRemote.h"
+#include "Util.h"
 
 #if defined(TARGET_WINDOWS)
 #include "input/windows/WINJoystick.h"
@@ -88,6 +89,7 @@ static const ActionMapping actions[] =
         {"osd"               , ACTION_SHOW_OSD},
         {"showsubtitles"     , ACTION_SHOW_SUBTITLES},
         {"nextsubtitle"      , ACTION_NEXT_SUBTITLE},
+        {"cyclesubtitle"     , ACTION_CYCLE_SUBTITLE},
         {"codecinfo"         , ACTION_SHOW_CODEC},
         {"nextpicture"       , ACTION_NEXT_PICTURE},
         {"previouspicture"   , ACTION_PREV_PICTURE},
@@ -249,6 +251,7 @@ static const ActionMapping actions[] =
         {"rightclick"        , ACTION_MOUSE_RIGHT_CLICK},
         {"middleclick"       , ACTION_MOUSE_MIDDLE_CLICK},
         {"doubleclick"       , ACTION_MOUSE_DOUBLE_CLICK},
+        {"longclick"         , ACTION_MOUSE_LONG_CLICK},
         {"wheelup"           , ACTION_MOUSE_WHEEL_UP},
         {"wheeldown"         , ACTION_MOUSE_WHEEL_DOWN},
         {"mousedrag"         , ACTION_MOUSE_DRAG},
@@ -396,16 +399,18 @@ static const ActionMapping windows[] =
         {"mediafilter"              , WINDOW_DIALOG_MEDIA_FILTER},
         {"addon"                    , WINDOW_ADDON_START}};
 
-static const ActionMapping mousecommands[] =
+static const ActionMapping mousekeys[] =
 {
-  { "leftclick",   ACTION_MOUSE_LEFT_CLICK },
-  { "rightclick",  ACTION_MOUSE_RIGHT_CLICK },
-  { "middleclick", ACTION_MOUSE_MIDDLE_CLICK },
-  { "doubleclick", ACTION_MOUSE_DOUBLE_CLICK },
-  { "wheelup",     ACTION_MOUSE_WHEEL_UP },
-  { "wheeldown",   ACTION_MOUSE_WHEEL_DOWN },
-  { "mousedrag",   ACTION_MOUSE_DRAG },
-  { "mousemove",   ACTION_MOUSE_MOVE }
+  { "click",       KEY_MOUSE_CLICK },
+  { "leftclick",   KEY_MOUSE_CLICK },
+  { "rightclick",  KEY_MOUSE_RIGHTCLICK },
+  { "middleclick", KEY_MOUSE_MIDDLECLICK },
+  { "doubleclick", KEY_MOUSE_DOUBLE_CLICK },
+  { "longclick",   KEY_MOUSE_LONG_CLICK },
+  { "wheelup",     KEY_MOUSE_WHEEL_UP },
+  { "wheeldown",   KEY_MOUSE_WHEEL_DOWN },
+  { "mousedrag",   KEY_MOUSE_DRAG },
+  { "mousemove",   KEY_MOUSE_MOVE }
 };
 
 static const ActionMapping touchcommands[] =
@@ -537,7 +542,7 @@ bool CButtonTranslator::Load(bool AlwaysLoad)
   };
   bool success = false;
 
-  for (unsigned int dirIndex = 0; dirIndex < sizeof(DIRS_TO_CHECK)/sizeof(DIRS_TO_CHECK[0]); ++dirIndex)
+  for (unsigned int dirIndex = 0; dirIndex < ARRAY_SIZE(DIRS_TO_CHECK); ++dirIndex)
   {
     if (XFILE::CDirectory::Exists(DIRS_TO_CHECK[dirIndex]))
     {
@@ -654,7 +659,6 @@ bool CButtonTranslator::LoadKeymap(const std::string &keymapPath)
   return true;
 }
 
-#if defined(HAS_LIRC) || defined(HAS_IRSERVERSUITE)
 bool CButtonTranslator::LoadLircMap(const std::string &lircmapPath)
 {
 #ifdef TARGET_POSIX
@@ -713,14 +717,13 @@ void CButtonTranslator::MapRemote(TiXmlNode *pRemote, const char* szDevice)
   TiXmlElement *pButton = pRemote->FirstChildElement();
   while (pButton)
   {
-    if (strcmpi(pButton->Value(), "altname")==0)
-      RemoteNames.push_back(string(pButton->GetText()));
-    else
+    if (!pButton->NoChildren())
     {
-      if (pButton->FirstChild() && pButton->FirstChild()->Value())
-        buttons[pButton->FirstChild()->Value()] = pButton->Value();
+      if (pButton->ValueStr() == "altname")
+        RemoteNames.push_back(pButton->FirstChild()->ValueStr());
+      else
+        buttons[pButton->FirstChild()->ValueStr()] = pButton->ValueStr();
     }
-
     pButton = pButton->NextSiblingElement();
   }
   for (vector<string>::iterator it  = RemoteNames.begin();
@@ -749,7 +752,6 @@ int CButtonTranslator::TranslateLircRemoteString(const char* szDevice, const cha
 
   return TranslateRemoteString((*it2).second.c_str());
 }
-#endif
 
 #if defined(HAS_SDL_JOYSTICK) || defined(HAS_EVENT_SERVER)
 void CButtonTranslator::MapJoystickActions(int windowID, TiXmlNode *pJoystick)
@@ -771,75 +773,68 @@ void CButtonTranslator::MapJoystickActions(int windowID, TiXmlNode *pJoystick)
   // parse map
   TiXmlElement *pButton = pJoystick->FirstChildElement();
   int id = 0;
-  //char* szId;
-  const char* szType;
-  const char *szAction;
   while (pButton)
   {
-    szType = pButton->Value();
-    szAction = pButton->GetText();
-    if (szAction == NULL)
-      szAction = "";
-    if (szType)
+    const std::string &type = pButton->ValueStr();
+    std::string action;
+    if (!pButton->NoChildren())
+      action = pButton->FirstChild()->ValueStr();
+
+    if ((pButton->QueryIntAttribute("id", &id) == TIXML_SUCCESS) && id>=0 && id<=256)
     {
-      if ((pButton->QueryIntAttribute("id", &id) == TIXML_SUCCESS) && id>=0 && id<=256)
+      if (type == "button")
       {
-        if (strcmpi(szType, "button")==0)
+        buttonMap[id] = action;
+      }
+      else if (type == "axis")
+      {
+        int limit = 0;
+        if (pButton->QueryIntAttribute("limit", &limit) == TIXML_SUCCESS)
         {
-          buttonMap[id] = string(szAction);
-        }
-        else if (strcmpi(szType, "axis")==0)
-        {
-          int limit = 0;
-          if (pButton->QueryIntAttribute("limit", &limit) == TIXML_SUCCESS)
-          {
-            if (limit==-1)
-              axisMap[-id] = string(szAction);
-            else if (limit==1)
-              axisMap[id] = string(szAction);
-            else if (limit==0)
-              axisMap[id|0xFFFF0000] = string(szAction);
-            else
-            {
-              axisMap[id] = string(szAction);
-              axisMap[-id] = string(szAction);
-              CLog::Log(LOGERROR, "Error in joystick map, invalid limit specified %d for axis %d", limit, id);
-            }
-          }
+          if (limit==-1)
+            axisMap[-id] = action;
+          else if (limit==1)
+            axisMap[id] = action;
+          else if (limit==0)
+            axisMap[id|0xFFFF0000] = action;
           else
           {
-            axisMap[id] = string(szAction);
-            axisMap[-id] = string(szAction);
-          }
-        }
-        else if (strcmpi(szType, "hat")==0)
-        {
-          string position;
-          if (pButton->QueryValueAttribute("position", &position) == TIXML_SUCCESS)
-          {
-            uint32_t hatID = id|0xFFF00000;
-            if (position.compare("up") == 0)
-              hatMap[(JACTIVE_HAT_UP<<16)|hatID] = string(szAction);
-            else if (position.compare("down") == 0)
-              hatMap[(JACTIVE_HAT_DOWN<<16)|hatID] = string(szAction);
-            else if (position.compare("right") == 0)
-              hatMap[(JACTIVE_HAT_RIGHT<<16)|hatID] = string(szAction);
-            else if (position.compare("left") == 0)
-              hatMap[(JACTIVE_HAT_LEFT<<16)|hatID] = string(szAction);
-            else
-              CLog::Log(LOGERROR, "Error in joystick map, invalid position specified %s for axis %d", position.c_str(), id);
+            axisMap[id] = action;
+            axisMap[-id] = action;
+            CLog::Log(LOGERROR, "Error in joystick map, invalid limit specified %d for axis %d", limit, id);
           }
         }
         else
-          CLog::Log(LOGERROR, "Error reading joystick map element, unknown button type: %s", szType);
+        {
+          axisMap[id] = action;
+          axisMap[-id] = action;
+        }
       }
-      else if (strcmpi(szType, "altname")==0)
-        joynames.push_back(string(szAction));
+      else if (type == "hat")
+      {
+        string position;
+        if (pButton->QueryValueAttribute("position", &position) == TIXML_SUCCESS)
+        {
+          uint32_t hatID = id|0xFFF00000;
+          if (position.compare("up") == 0)
+            hatMap[(JACTIVE_HAT_UP<<16)|hatID] = action;
+          else if (position.compare("down") == 0)
+            hatMap[(JACTIVE_HAT_DOWN<<16)|hatID] = action;
+          else if (position.compare("right") == 0)
+            hatMap[(JACTIVE_HAT_RIGHT<<16)|hatID] = action;
+          else if (position.compare("left") == 0)
+            hatMap[(JACTIVE_HAT_LEFT<<16)|hatID] = action;
+          else
+            CLog::Log(LOGERROR, "Error in joystick map, invalid position specified %s for axis %d", position.c_str(), id);
+        }
+      }
       else
-        CLog::Log(LOGERROR, "Error reading joystick map element, Invalid id: %d", id);
+        CLog::Log(LOGERROR, "Error reading joystick map element, unknown button type: %s", type.c_str());
     }
+    else if (type == "altname")
+      joynames.push_back(action);
     else
-      CLog::Log(LOGERROR, "Error reading joystick map element, skipping");
+      CLog::Log(LOGERROR, "Error reading joystick map element, Invalid id: %d", id);
 
     pButton = pButton->NextSiblingElement();
   }
@@ -990,7 +985,7 @@ void CButtonTranslator::GetWindows(std::vector<std::string> &windowList)
 
 int CButtonTranslator::GetFallbackWindow(int windowID)
 {
-  for (unsigned int index = 0; index < sizeof(fallbackWindows) / sizeof(fallbackWindows[0]); ++index)
+  for (unsigned int index = 0; index < ARRAY_SIZE(fallbackWindows); ++index)
   {
     if (fallbackWindows[index].origin == windowID)
       return fallbackWindows[index].target;
@@ -1032,11 +1027,10 @@ int CButtonTranslator::GetActionCode(int window, const CKey &key, std::string &s
     return 0;
   buttonMap::const_iterator it2 = (*it).second.find(code);
   int action = 0;
-  while (it2 != (*it).second.end())
+  if (it2 != (*it).second.end())
   {
     action = (*it2).second.id;
     strAction = (*it2).second.strID;
-    it2 = (*it).second.end();
   }
 #ifdef TARGET_POSIX
   // Some buttoncodes changed in Hardy
@@ -1044,12 +1038,11 @@ int CButtonTranslator::GetActionCode(int window, const CKey &key, std::string &s
   {
     CLog::Log(LOGDEBUG, "%s: Trying Hardy keycode for %#04x", __FUNCTION__, code);
     code &= ~0x0F00;
-    buttonMap::const_iterator it2 = (*it).second.find(code);
-    while (it2 != (*it).second.end())
+    it2 = (*it).second.find(code);
+    if (it2 != (*it).second.end())
     {
       action = (*it2).second.id;
       strAction = (*it2).second.strID;
-      it2 = (*it).second.end();
     }
   }
 #endif
@@ -1120,7 +1113,7 @@ void CButtonTranslator::MapWindowActions(TiXmlNode *pWindow, int windowID)
         else if (type == "keyboard")
             buttonCode = TranslateKeyboardButton(pButton);
         else if (type == "mouse")
-            buttonCode = TranslateMouseCommand(pButton->Value());
+            buttonCode = TranslateMouseCommand(pButton);
         else if (type == "appcommand")
             buttonCode = TranslateAppCommand(pButton->Value());
 
@@ -1166,7 +1159,7 @@ bool CButtonTranslator::TranslateActionString(const char *szAction, int &action)
   if (CBuiltins::HasCommand(strAction)) 
     action = ACTION_BUILT_IN_FUNCTION;
 
-  for (unsigned int index=0;index < sizeof(actions)/sizeof(actions[0]);++index)
+  for (unsigned int index=0;index < ARRAY_SIZE(actions);++index)
   {
     if (strAction == actions[index].name)
     {
@@ -1186,7 +1179,7 @@ bool CButtonTranslator::TranslateActionString(const char *szAction, int &action)
 
 std::string CButtonTranslator::TranslateWindow(int windowID)
 {
-  for (unsigned int index = 0; index < sizeof(windows) / sizeof(windows[0]); ++index)
+  for (unsigned int index = 0; index < ARRAY_SIZE(windows); ++index)
   {
     if (windows[index].action == windowID)
       return windows[index].name;
@@ -1219,7 +1212,7 @@ int CButtonTranslator::TranslateWindow(const std::string &window)
   }
 
   // run through the window structure
-  for (unsigned int index = 0; index < sizeof(windows) / sizeof(windows[0]); ++index)
+  for (unsigned int index = 0; index < ARRAY_SIZE(windows); ++index)
   {
     if (strWindow == windows[index].name)
       return windows[index].action;
@@ -1337,6 +1330,7 @@ uint32_t CButtonTranslator::TranslateRemoteString(const char *szButton)
   else if (strButton == "subtitle") buttonCode = XINPUT_IR_REMOTE_SUBTITLE;
   else if (strButton == "language") buttonCode = XINPUT_IR_REMOTE_LANGUAGE;
   else if (strButton == "eject") buttonCode = XINPUT_IR_REMOTE_EJECT;
+  else if (strButton == "print") buttonCode = XINPUT_IR_REMOTE_PRINT;
   else CLog::Log(LOGERROR, "Remote Translator: Can't find button %s", strButton.c_str());
   return buttonCode;
 }
@@ -1438,7 +1432,7 @@ uint32_t CButtonTranslator::TranslateAppCommand(const char *szButton)
   std::string strAppCommand = szButton;
   StringUtils::ToLower(strAppCommand);
 
-  for (int i = 0; i < sizeof(appcommands)/sizeof(appcommands[0]); i++)
+  for (int i = 0; i < ARRAY_SIZE(appcommands); i++)
     if (strAppCommand == appcommands[i].name)
       return appcommands[i].action | KEY_APPCOMMAND;
 
@@ -1448,18 +1442,40 @@ uint32_t CButtonTranslator::TranslateAppCommand(const char *szButton)
   return 0;
 }
 
-uint32_t CButtonTranslator::TranslateMouseCommand(const char *szButton)
+uint32_t CButtonTranslator::TranslateMouseCommand(TiXmlElement *pButton)
 {
-  std::string strMouseCommand = szButton;
-  StringUtils::ToLower(strMouseCommand);
+  uint32_t buttonId = 0;
 
-  for (unsigned int i = 0; i < sizeof(mousecommands)/sizeof(mousecommands[0]); i++)
-    if (strMouseCommand == mousecommands[i].name)
-      return mousecommands[i].action | KEY_MOUSE;
+  if (pButton)
+  {
+    std::string szKey = pButton->ValueStr();
+    if (!szKey.empty())
+    {
+      StringUtils::ToLower(szKey);
+      for (unsigned int i = 0; i < ARRAY_SIZE(mousekeys); i++)
+      {
+        if (szKey == mousekeys[i].name)
+        {
+          buttonId = mousekeys[i].action;
+          break;
+        }
+      }
+      if (!buttonId)
+      {
+        CLog::Log(LOGERROR, "Unknown mouse action (%s), skipping", pButton->Value());
+      }
+      else
+      {
+        int id = 0;
+        if ((pButton->QueryIntAttribute("id", &id) == TIXML_SUCCESS) && id>=0 && id<=4)
+        {
+          buttonId += id;
+        }
+      }
+    }
+  }
 
-  CLog::Log(LOGERROR, "%s: Can't find mouse command %s", __FUNCTION__, szButton);
-
-  return 0;
+  return buttonId;
 }
 
 void CButtonTranslator::Clear()
@@ -1497,7 +1513,7 @@ uint32_t CButtonTranslator::TranslateTouchCommand(TiXmlElement *pButton, CButton
     strTouchCommand += attrVal;
 
   uint32_t actionId = ACTION_NONE;
-  for (unsigned int i = 0; i < sizeof(touchcommands)/sizeof(touchcommands[0]); i++)
+  for (unsigned int i = 0; i < ARRAY_SIZE(touchcommands); i++)
   {
     if (strTouchCommand == touchcommands[i].name)
     {

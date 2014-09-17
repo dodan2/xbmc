@@ -86,16 +86,6 @@ bool CAddonsDirectory::GetDirectory(const CURL& url, CFileItemList &items)
     items.SetProperty("reponame",g_localizeStrings.Get(24043));
     items.SetLabel(g_localizeStrings.Get(24043));
   }
-  else if (path.GetHostName() == "check")
-  {
-    reposAsFolders = false;
-    groupAddons = false;
-    // force a refresh
-    CAddonInstaller::Get().UpdateRepos(true, true);
-    CAddonMgr::Get().GetAllOutdatedAddons(addons);
-    items.SetProperty("reponame",g_localizeStrings.Get(24055));
-    items.SetLabel(g_localizeStrings.Get(24055));
-  }
   else if (path.GetHostName() == "repos")
   {
     groupAddons = false;
@@ -214,8 +204,7 @@ bool CAddonsDirectory::GetDirectory(const CURL& url, CFileItemList &items)
     item->SetLabel(g_localizeStrings.Get(24032));
     items.Add(item);
   }
-  else if ((path.GetHostName() == "outdated" ||
-            path.GetHostName() == "check") && items.Size() > 1)
+  else if (path.GetHostName() == "outdated" && items.Size() > 1)
   {
     CFileItemPtr item(new CFileItem("addons://update_all/", true));
     item->SetLabel(g_localizeStrings.Get(24122));
@@ -228,7 +217,6 @@ bool CAddonsDirectory::GetDirectory(const CURL& url, CFileItemList &items)
 
 void CAddonsDirectory::GenerateListing(CURL &path, VECADDONS& addons, CFileItemList &items, bool reposAsFolders)
 {
-  std::string xbmcPath = CSpecialProtocol::TranslatePath("special://xbmc/addons");
   items.ClearItems();
   for (unsigned i=0; i < addons.size(); i++)
   {
@@ -330,10 +318,10 @@ bool CAddonsDirectory::GetScriptsAndPlugins(const std::string &content, CFileIte
     PluginPtr plugin = boost::dynamic_pointer_cast<CPluginSource>(addons[i]);
     if (plugin->ProvidesSeveral())
     {
-      CURL url = item->GetAsUrl();
+      CURL url = item->GetURL();
       std::string opt = StringUtils::Format("?content_type=%s",content.c_str());
       url.SetOptions(opt);
-      item->SetPath(url.Get());
+      item->SetURL(url);
     }
     items.Add(item);
   }
