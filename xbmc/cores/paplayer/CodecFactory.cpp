@@ -109,6 +109,8 @@ ICodec* CodecFactory::CreateCodec(const std::string& strFileType)
     return new DVDPlayerCodec();
   else if (fileType == "tak")
     return new DVDPlayerCodec();
+  else if (fileType == "opus")
+    return new DVDPlayerCodec();
 
   return NULL;
 }
@@ -159,7 +161,7 @@ ICodec* CodecFactory::CreateCodecDemux(const std::string& strFile, const std::st
     return dvdcodec;
   }
 
-  if (urlFile.GetProtocol() == "shout")
+  if (urlFile.IsProtocol("shout"))
   {
     DVDPlayerCodec *dvdcodec = new DVDPlayerCodec();
     dvdcodec->SetContentType("audio/mp3");

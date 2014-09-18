@@ -210,7 +210,8 @@ bool CDVDVideoCodecFFmpeg::Open(CDVDStreamInfo &hints, CDVDCodecOptions &options
       break;
     }
   }
-  else if (hints.codec == AV_CODEC_ID_HEVC)
+  else if (hints.codec == AV_CODEC_ID_HEVC
+        || hints.codec == AV_CODEC_ID_VP9)
     m_isSWCodec = true;
 
   if(pCodec == NULL)
@@ -295,7 +296,8 @@ bool CDVDVideoCodecFFmpeg::Open(CDVDStreamInfo &hints, CDVDCodecOptions &options
   if( num_threads > 1 && !hints.software && m_pHardware == NULL // thumbnail extraction fails when run threaded
   && ( pCodec->id == AV_CODEC_ID_H264
     || pCodec->id == AV_CODEC_ID_MPEG4
-    || pCodec->id == AV_CODEC_ID_HEVC))
+    || pCodec->id == AV_CODEC_ID_HEVC
+    || pCodec->id == AV_CODEC_ID_VP9))
     m_pCodecContext->thread_count = num_threads;
 
   if (avcodec_open2(m_pCodecContext, pCodec, NULL) < 0)
@@ -700,10 +702,10 @@ int CDVDVideoCodecFFmpeg::FilterOpen(const std::string& filters, bool scale)
                                         m_pCodecContext->width,
                                         m_pCodecContext->height,
                                         m_pCodecContext->pix_fmt,
-                                        m_pCodecContext->time_base.num,
-                                        m_pCodecContext->time_base.den,
-                                        m_pCodecContext->sample_aspect_ratio.num,
-                                        m_pCodecContext->sample_aspect_ratio.den);
+                                        m_pCodecContext->time_base.num ? m_pCodecContext->time_base.num : 1,
+                                        m_pCodecContext->time_base.num ? m_pCodecContext->time_base.den : 1,
+                                        m_pCodecContext->sample_aspect_ratio.num != 0 ? m_pCodecContext->sample_aspect_ratio.num : 1,
+                                        m_pCodecContext->sample_aspect_ratio.num != 0 ? m_pCodecContext->sample_aspect_ratio.den : 1);
 
   if ((result = avfilter_graph_create_filter(&m_pFilterIn, srcFilter, "src", args.c_str(), NULL, m_pFilterGraph)) < 0)
   {

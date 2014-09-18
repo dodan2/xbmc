@@ -400,13 +400,8 @@ bool CGUIWindowVideoBase::ShowIMDB(CFileItem *item, const ScraperPtr &info2, boo
       }
       else
       {
-        int idEpisode=-1;
-        if ((idEpisode = m_database.GetEpisodeId(item->GetPath(),dbId)) > -1)
-        {
-          bHasInfo = true;
-          m_database.GetEpisodeInfo(item->GetPath(), movieDetails, idEpisode);
-        }
-        else
+        bHasInfo = m_database.GetEpisodeInfo(item->GetPath(), movieDetails, dbId);
+        if (!bHasInfo)
         {
           // !! WORKAROUND !!
           // As we cannot add an episode to a non-existing tvshow entry, we have to check the parent directory
@@ -944,7 +939,7 @@ bool CGUIWindowVideoBase::OnFileAction(int iItem, int action)
       {
         CStdString itemPath(item->GetPath());
         itemPath = item->GetVideoInfoTag()->m_strFileNameAndPath;
-        if (URIUtils::IsStack(itemPath) && CFileItem(CStackDirectory::GetFirstStackedFile(itemPath),false).IsDVDImage())
+        if (URIUtils::IsStack(itemPath) && CFileItem(CStackDirectory::GetFirstStackedFile(itemPath),false).IsDiscImage())
           choices.Add(SELECT_ACTION_PLAYPART, 20324); // Play Part
       }
 
@@ -1221,7 +1216,7 @@ void CGUIWindowVideoBase::GetContextButtons(int itemNumber, CContextButtons &but
         if (URIUtils::IsStack(path))
         {
           vector<int> times;
-          if (m_database.GetStackTimes(path,times) || CFileItem(CStackDirectory::GetFirstStackedFile(path),false).IsDVDImage())
+          if (m_database.GetStackTimes(path,times) || CFileItem(CStackDirectory::GetFirstStackedFile(path),false).IsDiscImage())
             buttons.Add(CONTEXT_BUTTON_PLAY_PART, 20324);
         }
 
@@ -1307,7 +1302,7 @@ bool CGUIWindowVideoBase::OnPlayStackPart(int iItem)
   if (selectedFile > 0)
   {
     // ISO stack
-    if (CFileItem(CStackDirectory::GetFirstStackedFile(path),false).IsDVDImage())
+    if (CFileItem(CStackDirectory::GetFirstStackedFile(path),false).IsDiscImage())
     {
       CStdString resumeString = CGUIWindowVideoBase::GetResumeString(*(parts[selectedFile - 1].get()));
       stack->m_lStartOffset = 0;
@@ -1777,7 +1772,7 @@ bool CGUIWindowVideoBase::StackingAvailable(const CFileItemList &items)
   return !(items.IsTuxBox()         || items.IsPlugin()  ||
            items.IsAddonsPath()     || items.IsRSS()     ||
            items.IsInternetStream() || items.IsVideoDb() ||
-           url.GetProtocol() == "playlistvideo");
+           url.IsProtocol("playlistvideo"));
 }
 
 void CGUIWindowVideoBase::GetGroupedItems(CFileItemList &items)

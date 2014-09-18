@@ -334,6 +334,26 @@ void CGUIDialogSubtitles::Search(const std::string &search/*=""*/)
   if (g_application.CurrentFileItem().IsStack())
     url.SetOption("stack", "1");
 
+  std::string preferredLanguage = CSettings::Get().GetString("locale.subtitlelanguage");
+
+  if(StringUtils::EqualsNoCase(preferredLanguage, "original"))
+  {
+    SPlayerAudioStreamInfo info;
+    CStdString strLanguage;
+
+    int currentAudio = g_application.m_pPlayer->GetAudioStream();
+    g_application.m_pPlayer->GetAudioStreamInfo(currentAudio, info);
+
+    if (!g_LangCodeExpander.Lookup(strLanguage, info.language))
+      strLanguage = "Unknown";
+
+    preferredLanguage = strLanguage;
+  }
+  else if (StringUtils::EqualsNoCase(preferredLanguage, "default"))
+    preferredLanguage = CSettings::Get().GetString("locale.language");
+
+  url.SetOption("preferredlanguage", preferredLanguage);
+
   AddJob(new CSubtitlesJob(url, ""));
 }
 
@@ -405,7 +425,7 @@ void CGUIDialogSubtitles::Download(const CFileItem &subtitle)
 
   // subtitle URL should be of the form plugin://<addonid>/?param=foo&param=bar
   // we just append (if not already present) the action=download parameter.
-  CURL url(subtitle.GetAsUrl());
+  CURL url(subtitle.GetURL());
   if (url.GetOption("action").empty())
     url.SetOption("action", "download");
 
