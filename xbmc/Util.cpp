@@ -679,7 +679,7 @@ void CUtil::ClearTempFonts()
 {
   CStdString searchPath = "special://temp/fonts/";
 
-  if (!CFile::Exists(searchPath))
+  if (!CDirectory::Exists(searchPath))
     return;
 
   CFileItemList items;
@@ -735,7 +735,7 @@ CStdString CUtil::GetNextPathname(const CStdString &path_template, int max)
   for (int i = 0; i <= max; i++)
   {
     CStdString name = StringUtils::Format(path_template.c_str(), i);
-    if (!CFile::Exists(name))
+    if (!CFile::Exists(name) && !CDirectory::Exists(name))
       return name;
   }
   return "";
@@ -1866,8 +1866,6 @@ void CUtil::ScanForExternalSubtitles(const std::string& strMovie, std::vector<st
     "Subtitle",
     NULL};
   
-  vector<std::string> vecExtensionsCached;
-  
   CFileItem item(strMovie, false);
   if ( item.IsInternetStream()
     || item.IsHDHomeRun()
@@ -1970,7 +1968,6 @@ void CUtil::ScanForExternalSubtitles(const std::string& strMovie, std::vector<st
     strLookInPaths.push_back(strPath);
   }
   
-  std::string strLExt;
   std::string strDest;
   std::string strItem;
   
